@@ -1,0 +1,22 @@
+# Render Blueprint — set Root Directory to `backend` in the Render UI, or adjust paths below.
+# Create a PostgreSQL instance first; copy its Internal Database URL into DATABASE_URL.
+
+services:
+  - type: web
+    name: seait-enrollment-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: INIT_DB
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
