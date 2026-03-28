@@ -57,5 +57,20 @@
       if (!res.ok) throw new Error(data.detail || res.statusText);
       return data;
     },
+    /** Multipart POST without JSON (e.g. payment verify form fields). */
+    postFormData: async (path, formData) => {
+      const headers = {};
+      const t = token();
+      if (t) headers.Authorization = 'Bearer ' + t;
+      const res = await fetch(cfg.API_BASE + path, { method: 'POST', body: formData, headers });
+      if (res.status === 401) {
+        localStorage.removeItem('access_token');
+        window.location.href = 'login.html';
+        throw new Error('Unauthorized');
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      return data;
+    },
   };
 })();

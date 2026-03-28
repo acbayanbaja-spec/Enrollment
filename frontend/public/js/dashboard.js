@@ -1,5 +1,5 @@
 /**
- * Role-based dashboard: navigation, enrollment form, queues, AI, reports.
+ * SEAIT dashboard — role navigation, multi-step enrollment wizard, modals, toasts, FAB AI chat.
  */
 (function () {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -11,19 +11,24 @@
   const role = user.role_name;
   const main = document.getElementById('main');
   const nav = document.getElementById('nav');
-  const userLine = document.getElementById('userLine');
-  userLine.textContent = user.full_name + ' · ' + role;
+  const pageTitle = document.getElementById('pageTitle');
+  const pageSubtitle = document.getElementById('pageSubtitle');
+  const headerUserName = document.getElementById('headerUserName');
+  const headerUserRole = document.getElementById('headerUserRole');
+  headerUserName.textContent = user.full_name;
+  headerUserRole.textContent = role;
 
   const menuBtn = document.getElementById('menuBtn');
   const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
+  const overlay = document.getElementById('sidebarOverlay');
+
   function closeMenu() {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
+    sidebar.classList.remove('is-open');
+    overlay.classList.remove('is-visible');
   }
   menuBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('show');
+    sidebar.classList.toggle('is-open');
+    overlay.classList.toggle('is-visible');
   });
   overlay.addEventListener('click', closeMenu);
 
@@ -32,7 +37,125 @@
     window.location.href = 'login.html';
   });
 
-  /** Build enrollment payload from form DOM */
+  /** Inline SVG icons (currentColor) */
+  const ic = {
+    home: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+    form: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    pay: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    verify: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    bell: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+    megaphone: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
+    chart: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    queue: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    idcard: '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+  };
+
+  function setPageHead(title, subtitle) {
+    pageTitle.textContent = title;
+    pageSubtitle.textContent = subtitle || '';
+  }
+
+  function showView(html) {
+    main.innerHTML = html;
+  }
+
+  function cloneTpl(id) {
+    return document.getElementById(id).content.cloneNode(true);
+  }
+
+  const WIZARD_HINTS = {
+    1: 'Tip: Use your legal name as it appears on your birth certificate.',
+    2: 'Tip: Provide at least one parent or guardian contact for verification.',
+    3: 'Tip: Include your SHS strand if you completed K–12 in the Philippines.',
+    4: 'Tip: Emergency contact should be reachable during school hours.',
+    5: 'Review all sections. After submit, Phase 2 routing depends on your category.',
+  };
+
+  function initWizard() {
+    const total = 5;
+    let step = 1;
+    const fill = document.getElementById('wizardFill');
+    const label = document.getElementById('wizardStepLabel');
+    const hint = document.getElementById('wizardSmartHint');
+    const prev = document.getElementById('wizPrev');
+    const next = document.getElementById('wizNext');
+    const submitBtn = document.getElementById('submitForm');
+    const panels = () => document.querySelectorAll('.wizard-panel');
+
+    function showStep(n) {
+      panels().forEach((p) => {
+        p.classList.toggle('is-active', parseInt(p.getAttribute('data-wizard-step'), 10) === n);
+      });
+      const pct = (n / total) * 100;
+      fill.style.width = pct + '%';
+      label.textContent = 'Step ' + n + ' of ' + total;
+      hint.innerHTML = '<span class="smart-hint" style="display:block;margin:0">' + WIZARD_HINTS[n] + '</span>';
+      prev.style.display = n > 1 ? 'inline-flex' : 'none';
+      next.style.display = n < total ? 'inline-flex' : 'none';
+      submitBtn.style.display = n === total ? 'inline-flex' : 'none';
+      if (n === 5) buildReview();
+    }
+
+    function validateStep(n) {
+      const sel = '[data-step-req="' + n + '"]';
+      const fields = document.querySelectorAll(sel);
+      for (let i = 0; i < fields.length; i++) {
+        const el = fields[i];
+        if (!el.checkValidity()) {
+          el.reportValidity();
+          return false;
+        }
+      }
+      if (n === 1) {
+        const course = document.getElementById('course_id');
+        if (!course.value) {
+          UI.toast('error', 'Please select a course.');
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function buildReview() {
+      const el = document.getElementById('reviewMount');
+      const c = document.getElementById('course_id');
+      const ctext = c.options[c.selectedIndex] ? c.options[c.selectedIndex].text : '';
+      el.innerHTML =
+        '<p><strong>Program:</strong> ' +
+        UI.escapeHtml(document.getElementById('category').value) +
+        ' · ' +
+        UI.escapeHtml(ctext) +
+        '</p><p><strong>Term:</strong> ' +
+        UI.escapeHtml(document.getElementById('academic_year').value) +
+        ' — ' +
+        UI.escapeHtml(document.getElementById('semester').value) +
+        '</p><p><strong>Name:</strong> ' +
+        UI.escapeHtml(document.getElementById('pfirst').value + ' ' + document.getElementById('plast').value) +
+        '</p><p><strong>Contact:</strong> ' +
+        UI.escapeHtml(document.getElementById('pcontact').value) +
+        '</p><p><strong>Emergency:</strong> ' +
+        UI.escapeHtml(document.getElementById('e_name').value) +
+        ' (' +
+        UI.escapeHtml(document.getElementById('e_rel').value) +
+        ')</p>';
+    }
+
+    prev.addEventListener('click', () => {
+      if (step > 1) {
+        step--;
+        showStep(step);
+      }
+    });
+    next.addEventListener('click', () => {
+      if (!validateStep(step)) return;
+      if (step < total) {
+        step++;
+        showStep(step);
+      }
+    });
+    showStep(1);
+  }
+
   function buildPayload(submit, enrollmentId) {
     const course_id = parseInt(document.getElementById('course_id').value, 10);
     return {
@@ -86,56 +209,84 @@
     };
   }
 
-  function showView(html) {
-    main.innerHTML = html;
-  }
-
-  function cloneTpl(id) {
-    const t = document.getElementById(id);
-    return t.content.cloneNode(true);
+  function validateFullForm() {
+    const form = document.getElementById('enrollmentForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return false;
+    }
+    return true;
   }
 
   async function loadCourses() {
     const list = await api.get('/api/courses/');
     const sel = document.getElementById('course_id');
     if (!sel) return;
-    sel.innerHTML = list.map((c) => `<option value="${c.id}">${c.code} — ${c.name}</option>`).join('');
+    sel.innerHTML = list.map((c) => '<option value="' + c.id + '">' + c.code + ' — ' + c.name + '</option>').join('');
+  }
+
+  function badgeClass(s) {
+    if (s === 'Approved') return 'badge--ok';
+    if (s === 'Rejected') return 'badge--reject';
+    return 'badge--pending';
   }
 
   function renderTracker(enrollments) {
     const el = document.getElementById('trackerMount');
     if (!el) return;
     if (!enrollments.length) {
-      el.innerHTML = '<p style="color:var(--muted)">No enrollments yet. Complete the enrollment form.</p>';
+      el.innerHTML =
+        '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line" style="width:70%"></div><p style="color:var(--color-text-muted);margin-top:0.75rem">No enrollments yet. Start the enrollment wizard.</p>';
       return;
     }
     el.innerHTML = enrollments
       .map((e) => {
         const phases = [
-          { n: 1, s: e.phase1_status },
-          { n: 2, s: e.phase2_status },
-          { n: 3, s: e.phase3_status },
+          { n: 1, label: 'Form submitted', s: e.phase1_status },
+          { n: 2, label: 'Verification (Registrar / Accounting)', s: e.phase2_status },
+          { n: 3, label: 'Student Affairs (ID)', s: e.phase3_status },
         ];
-        const done = phases.filter((p) => p.s === 'Approved').length;
-        const pct = (done / 3) * 100;
-        const badge = (s) =>
-          s === 'Approved'
-            ? 'badge-ok'
-            : s === 'Rejected'
-              ? 'badge-reject'
-              : 'badge-pending';
-        return `
-        <div style="margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--glass-border)">
-          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
-            <strong>#${e.id}</strong>
-            <span style="color:var(--muted)">${e.course_code || ''} · ${e.academic_year} ${e.semester}</span>
-          </div>
-          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
-            ${phases.map((p) => `<span class="badge ${badge(p.s)}">Phase ${p.n}: ${p.s}</span>`).join('')}
-          </div>
-          <div style="font-size:0.85rem;color:var(--muted);margin-top:0.35rem">Current phase: ${e.current_phase} · Next: ${e.phase2_assigned_role} (Phase 2)</div>
-        </div>`;
+        const doneIdx = phases.findIndex((p) => p.s !== 'Approved');
+        const current = doneIdx === -1 ? 2 : Math.max(0, doneIdx);
+        return (
+          '<div class="ds-card" style="margin-bottom:1rem;padding:1rem">' +
+          '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;align-items:center">' +
+          '<strong>#' +
+          e.id +
+          '</strong>' +
+          '<span style="color:var(--color-text-muted);font-size:0.88rem">' +
+          UI.escapeHtml(e.course_code || '') +
+          ' · ' +
+          UI.escapeHtml(e.academic_year) +
+          ' ' +
+          UI.escapeHtml(e.semester) +
+          '</span></div>' +
+          '<div class="timeline" style="margin-top:1rem">' +
+          phases
+            .map((p, i) => {
+              let cls = '';
+              if (p.s === 'Approved') cls = 'timeline-item--done';
+              else if (i === current && p.s === 'Pending') cls = 'timeline-item--current';
+              return (
+                '<div class="timeline-item ' +
+                cls +
+                '"><div class="timeline-dot"></div><div class="timeline-body"><h4>Phase ' +
+                p.n +
+                ': ' +
+                UI.escapeHtml(p.label) +
+                '</h4><span class="badge ' +
+                badgeClass(p.s) +
+                '">' +
+                UI.escapeHtml(p.s) +
+                '</span></div></div>'
+              );
+            })
+            .join('') +
+          '</div>' +
+          '<p style="font-size:0.82rem;color:var(--color-text-muted);margin:0.5rem 0 0">Next office: <strong>' +
+          UI.escapeHtml(e.phase2_assigned_role) +
+          '</strong> (when applicable)</p></div>'
+        );
       })
       .join('');
   }
@@ -149,50 +300,106 @@
     }
   }
 
+  async function loadHistory() {
+    const el = document.getElementById('historyMount');
+    if (!el) return;
+    try {
+      const list = await api.get('/api/enrollment/mine');
+      if (!list.length) {
+        el.innerHTML = '<p style="color:var(--color-text-muted)">No records yet.</p>';
+        return;
+      }
+      el.innerHTML =
+        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Program</th><th>Term</th><th>P1</th><th>P2</th><th>P3</th></tr></thead><tbody>' +
+        list
+          .map(
+            (e) =>
+              '<tr><td>#' +
+              e.id +
+              '</td><td>' +
+              UI.escapeHtml(e.course_code || '') +
+              '</td><td>' +
+              UI.escapeHtml(e.academic_year) +
+              '</td><td><span class="badge ' +
+              badgeClass(e.phase1_status) +
+              '">' +
+              e.phase1_status +
+              '</span></td><td><span class="badge ' +
+              badgeClass(e.phase2_status) +
+              '">' +
+              e.phase2_status +
+              '</span></td><td><span class="badge ' +
+              badgeClass(e.phase3_status) +
+              '">' +
+              e.phase3_status +
+              '</span></td></tr>'
+          )
+          .join('') +
+        '</tbody></table></div>';
+    } catch (e) {
+      el.textContent = e.message;
+    }
+  }
+
   async function loadAssistantSteps() {
     const el = document.getElementById('stepsMount');
     if (!el) return;
     try {
       const data = await api.get('/api/ai/assistant-steps');
       el.innerHTML =
-        '<ol style="margin:0;padding-left:1.2rem;color:var(--muted);line-height:1.7">' +
-        data.steps.map((s) => `<li><strong style="color:var(--text)">${s.title}</strong> — ${s.hint}</li>`).join('') +
+        '<ol style="margin:0;padding-left:1.2rem;color:var(--color-text-muted);line-height:1.75">' +
+        data.steps
+          .map(
+            (s) =>
+              '<li><strong style="color:var(--color-text)">' +
+              UI.escapeHtml(s.title) +
+              '</strong> — ' +
+              UI.escapeHtml(s.hint) +
+              '</li>'
+          )
+          .join('') +
         '</ol>';
     } catch (e) {
-      el.textContent = 'Could not load steps.';
+      el.textContent = 'Could not load assistant steps.';
     }
   }
 
   function wireEnrollmentForm() {
+    initWizard();
     const form = document.getElementById('enrollmentForm');
-    if (!form) return;
     document.getElementById('saveDraft').addEventListener('click', async () => {
-      const msg = document.getElementById('formMsg');
-      msg.innerHTML = '';
+      document.getElementById('formMsg').innerHTML = '';
+      if (!validateFullForm()) {
+        UI.toast('error', 'Complete all required fields before saving.');
+        return;
+      }
       try {
         const id = document.getElementById('enrollment_id').value;
         const payload = buildPayload(false, id ? parseInt(id, 10) : null);
         const res = await api.post('/api/enrollment/save', payload);
         document.getElementById('enrollment_id').value = res.id;
-        msg.innerHTML = '<div class="alert alert-success">Draft saved.</div>';
+        UI.toast('success', 'Draft saved successfully.');
         refreshTracker();
       } catch (e) {
-        msg.innerHTML = '<div class="alert alert-error">' + e.message + '</div>';
+        UI.toast('error', e.message);
       }
     });
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const msg = document.getElementById('formMsg');
-      msg.innerHTML = '';
+      document.getElementById('formMsg').innerHTML = '';
+      if (!validateFullForm()) {
+        UI.toast('error', 'Please fix validation errors.');
+        return;
+      }
       try {
         const id = document.getElementById('enrollment_id').value;
         const payload = buildPayload(true, id ? parseInt(id, 10) : null);
         const res = await api.post('/api/enrollment/save', payload);
         document.getElementById('enrollment_id').value = res.id;
-        msg.innerHTML = '<div class="alert alert-success">' + res.message + '</div>';
+        UI.toast('success', res.message || 'Submitted.');
         refreshTracker();
       } catch (e) {
-        msg.innerHTML = '<div class="alert alert-error">' + e.message + '</div>';
+        UI.toast('error', e.message);
       }
     });
   }
@@ -201,12 +408,11 @@
     const btn = document.getElementById('payUpload');
     if (!btn) return;
     btn.addEventListener('click', async () => {
-      const msg = document.getElementById('payMsg');
-      msg.innerHTML = '';
+      document.getElementById('payMsg').innerHTML = '';
       const eid = document.getElementById('payEnrollId').value;
       const file = document.getElementById('payFile').files[0];
       if (!eid || !file) {
-        msg.innerHTML = '<div class="alert alert-error">Enrollment ID and file required.</div>';
+        UI.toast('error', 'Enrollment ID and file are required.');
         return;
       }
       const fd = new FormData();
@@ -216,31 +422,29 @@
       if (amt) fd.append('amount', amt);
       try {
         await api.uploadForm('/api/payments/upload', fd);
-        msg.innerHTML = '<div class="alert alert-success">Receipt uploaded.</div>';
+        UI.toast('success', 'Receipt uploaded successfully.');
       } catch (e) {
-        msg.innerHTML = '<div class="alert alert-error">' + e.message + '</div>';
+        UI.toast('error', e.message);
       }
     });
-  }
-
-  async function loadPaymentList() {
     const el = document.getElementById('payList');
-    const eid = document.getElementById('payEnrollId');
-    if (!el || !eid) return;
-    eid.addEventListener('change', async () => {
-      if (!eid.value) return;
-      try {
-        const rows = await api.get('/api/payments/enrollment/' + eid.value);
-        el.innerHTML =
-          rows.length === 0
-            ? 'No receipts yet.'
-            : '<ul>' +
-              rows.map((p) => `<li>#${p.id} — ${p.status} — ${p.original_filename || ''}</li>`).join('') +
-              '</ul>';
-      } catch (err) {
-        el.textContent = err.message;
-      }
-    });
+    const eidIn = document.getElementById('payEnrollId');
+    if (el && eidIn) {
+      eidIn.addEventListener('change', async () => {
+        if (!eidIn.value) return;
+        try {
+          const rows = await api.get('/api/payments/enrollment/' + eidIn.value);
+          el.innerHTML =
+            rows.length === 0
+              ? '<p>No receipts yet.</p>'
+              : '<ul style="margin:0;padding-left:1.2rem">' +
+                rows.map((p) => '<li>#' + p.id + ' — ' + p.status + ' — ' + UI.escapeHtml(p.original_filename || '') + '</li>').join('') +
+                '</ul>';
+        } catch (err) {
+          el.textContent = err.message;
+        }
+      });
+    }
   }
 
   async function loadNotifications() {
@@ -250,11 +454,17 @@
       const rows = await api.get('/api/notifications/');
       el.innerHTML =
         rows.length === 0
-          ? '<p style="color:var(--muted)">No notifications.</p>'
+          ? '<p style="color:var(--color-text-muted)">No notifications.</p>'
           : rows
               .map(
                 (n) =>
-                  `<div class="card" style="padding:0.75rem;margin-bottom:0.5rem"><strong>${n.title}</strong><div style="font-size:0.85rem;color:var(--muted)">${n.body || ''}</div><div style="font-size:0.75rem;margin-top:0.35rem">${n.created_at}</div></div>`
+                  '<div class="ds-card" style="padding:0.85rem;margin-bottom:0.5rem"><strong>' +
+                  UI.escapeHtml(n.title) +
+                  '</strong><div style="font-size:0.85rem;color:var(--color-text-muted)">' +
+                  UI.escapeHtml(n.body || '') +
+                  '</div><div style="font-size:0.72rem;margin-top:0.35rem;color:var(--color-text-muted)">' +
+                  UI.escapeHtml(n.created_at) +
+                  '</div></div>'
               )
               .join('');
     } catch (e) {
@@ -269,92 +479,289 @@
     el.innerHTML = rows
       .map(
         (a) =>
-          `<div class="card" style="padding:0.75rem;margin-bottom:0.5rem"><strong>${a.title}</strong> <span class="badge badge-pending">${a.priority}</span><div style="margin-top:0.5rem;color:var(--muted);white-space:pre-wrap">${a.body}</div></div>`
+          '<div class="ds-card" style="padding:0.85rem;margin-bottom:0.5rem"><strong>' +
+          UI.escapeHtml(a.title) +
+          '</strong> <span class="badge badge--pending">' +
+          UI.escapeHtml(a.priority) +
+          '</span><div style="margin-top:0.5rem;color:var(--color-text-muted);white-space:pre-wrap">' +
+          UI.escapeHtml(a.body) +
+          '</div></div>'
       )
       .join('');
     if (role === 'Admin') {
       document.getElementById('adminAnnounce').classList.remove('hidden');
       document.getElementById('anPost').onclick = async () => {
-        await api.post('/api/announcements/', {
-          title: document.getElementById('anTitle').value,
-          body: document.getElementById('anBody').value,
-          priority: 'normal',
-        });
-        await loadAnnouncements();
+        try {
+          await api.post('/api/announcements/', {
+            title: document.getElementById('anTitle').value,
+            body: document.getElementById('anBody').value,
+            priority: 'normal',
+          });
+          UI.toast('success', 'Announcement published.');
+          await loadAnnouncements();
+        } catch (e) {
+          UI.toast('error', e.message);
+        }
       };
     }
   }
 
-  async function loadReports() {
-    const el = document.getElementById('reportOut');
-    if (!el) return;
-    const r = await api.get('/api/reports/summary');
-    el.textContent = JSON.stringify(r, null, 2);
+  function mediaUrl(fname) {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_BASE) || '';
+    return base + '/media/' + encodeURIComponent(fname);
   }
 
-  async function loadQueue(path, title, decideUrl) {
+  async function loadPayVerify() {
+    const mount = document.getElementById('payVerifyMount');
+    if (!mount) return;
+    mount.innerHTML = '<div class="skeleton skeleton-line"></div>';
+    try {
+      const rows = await api.get('/api/payments/pending');
+      if (!rows.length) {
+        mount.innerHTML = '<p style="color:var(--color-text-muted)">No pending receipts.</p>';
+        return;
+      }
+      mount.innerHTML =
+        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Enrollment</th><th>File</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
+        rows
+          .map((p) => {
+            const enc = encodeURIComponent(p.receipt_file_path || '');
+            return (
+              '<tr><td>#' +
+              p.id +
+              '</td><td>#' +
+              p.enrollment_form_id +
+              '</td><td>' +
+              UI.escapeHtml(p.original_filename || p.receipt_file_path) +
+              '</td><td>' +
+              UI.escapeHtml(String(p.uploaded_at)) +
+              '</td><td><button type="button" class="ds-btn ds-btn--primary review-pay" data-id="' +
+              p.id +
+              '" data-file="' +
+              enc +
+              '" style="width:auto;padding:0.4rem 0.75rem;font-size:0.82rem">Review</button></td></tr>'
+            );
+          })
+          .join('') +
+        '</tbody></table></div>';
+
+      mount.querySelectorAll('.review-pay').forEach((b) => {
+        b.addEventListener('click', async () => {
+          const pid = b.getAttribute('data-id');
+          const file = decodeURIComponent(b.getAttribute('data-file') || '');
+          const ext = (file || '').toLowerCase().split('.').pop();
+          const isImg = ['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) >= 0;
+          const preview = isImg
+            ? '<img class="receipt-preview" src="' + mediaUrl(file) + '" alt="Receipt"/>'
+            : '<p><a href="' +
+              mediaUrl(file) +
+              '" target="_blank" rel="noopener">Open PDF in new tab</a></p>';
+          const body =
+            '<p style="color:var(--color-text-muted);font-size:0.9rem">Payment #' +
+            pid +
+            '</p>' +
+            preview +
+            '<label style="display:block;margin-top:0.75rem;font-weight:600">Notes</label><textarea name="modal-notes" class="modal-notes" placeholder="Optional verification notes"></textarea>';
+          const res = await UI.openModalDual({
+            title: 'Verify receipt',
+            bodyHtml: body,
+          });
+          if (!res || !res.action) return;
+          const fd = new FormData();
+          fd.append('status_value', res.action === 'approve' ? 'Approved' : 'Rejected');
+          fd.append('notes', res.notes || '');
+          try {
+            await api.postFormData('/api/payments/' + pid + '/verify', fd);
+            UI.toast('success', res.action === 'approve' ? 'Payment approved.' : 'Payment rejected.');
+            await loadPayVerify();
+          } catch (e) {
+            UI.toast('error', e.message);
+          }
+        });
+      });
+    } catch (e) {
+      mount.innerHTML = '<p class="alert-banner alert-banner--error">' + UI.escapeHtml(e.message) + '</p>';
+    }
+  }
+
+  async function loadReportsCharts(containerStats, containerChart, preEl) {
+    const r = await api.get('/api/reports/summary');
+    if (preEl) preEl.textContent = JSON.stringify(r, null, 2);
+    if (containerStats) {
+      containerStats.innerHTML =
+        '<div class="stat-tile"><div class="stat-tile__val">' +
+        r.total_enrollments +
+        '</div><div class="stat-tile__lbl">Total enrollments</div></div>' +
+        '<div class="stat-tile"><div class="stat-tile__val">' +
+        (r.by_status.phase3_approved || 0) +
+        '</div><div class="stat-tile__lbl">Fully approved</div></div>' +
+        '<div class="stat-tile"><div class="stat-tile__val">' +
+        (r.by_status.rejected_any || 0) +
+        '</div><div class="stat-tile__lbl">Rejected (any phase)</div></div>';
+    }
+    if (containerChart) {
+      const max = Math.max(1, r.total_enrollments);
+      const phases = r.by_phase || {};
+      const h = (n) => Math.round((n / max) * 100) + '%';
+      containerChart.innerHTML = ['1', '2', '3']
+        .map(
+          (k) =>
+            '<div class="chart-bar-wrap"><div class="chart-bar" style="height:' +
+            h(phases[k] || 0) +
+            '"></div><span class="chart-label">Phase ' +
+            k +
+            '</span><strong>' +
+            (phases[k] || 0) +
+            '</strong></div>'
+        )
+        .join('');
+    }
+  }
+
+  async function loadAdminHome() {
+    await loadReportsCharts(
+      document.getElementById('adminStatGrid'),
+      document.getElementById('adminChartRow'),
+      null
+    );
+  }
+
+  async function loadReportsView() {
+    await loadReportsCharts(
+      document.getElementById('reportStatGrid'),
+      document.getElementById('reportChartRow'),
+      document.getElementById('reportOut')
+    );
+  }
+
+  let queueReload = null;
+
+  async function loadQueue(path, title, decideUrl, phase) {
     document.getElementById('queueTitle').textContent = title;
     const body = document.getElementById('queueBody');
+    const search = document.getElementById('queueSearch');
     const rows = await api.get(path);
-    if (!rows.length) {
-      body.innerHTML = '<p style="color:var(--muted)">No pending items.</p>';
-      return;
-    }
-    body.innerHTML = rows
-      .map((e) => {
-        const name =
-          e.personal && (e.personal.first_name || '') + ' ' + (e.personal.last_name || '');
-        return `<div class="card" style="padding:0.75rem;margin-bottom:0.5rem">
-          <strong>Enrollment #${e.id}</strong> — ${e.course_code || ''} — ${name}
-          <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap">
-            <button class="btn btn-primary" data-eid="${e.id}" data-act="approve">Approve</button>
-            <button class="btn btn-ghost" data-eid="${e.id}" data-act="reject">Reject</button>
-          </div>
-        </div>`;
-      })
-      .join('');
-    body.querySelectorAll('button').forEach((b) => {
-      b.addEventListener('click', async () => {
-        const id = b.getAttribute('data-eid');
-        const act = b.getAttribute('data-act');
-        const notes = prompt('Notes (optional):') || '';
-        try {
-          await api.post(decideUrl.replace('{id}', id), {
-            status: act === 'approve' ? 'Approved' : 'Rejected',
-            notes,
-          });
-          await loadQueue(path, title, decideUrl);
-        } catch (err) {
-          alert(err.message);
-        }
+    queueReload = () => loadQueue(path, title, decideUrl, phase);
+
+    function render(filter) {
+      const q = (filter || '').toLowerCase();
+      const filtered = rows.filter((e) => {
+        if (!q) return true;
+        const name = (e.personal && (e.personal.first_name || '') + ' ' + (e.personal.last_name || '')) || '';
+        return (
+          String(e.id).includes(q) ||
+          (e.course_code && e.course_code.toLowerCase().includes(q)) ||
+          name.toLowerCase().includes(q)
+        );
       });
-    });
-  }
-
-  function wireChat() {
-    const log = document.getElementById('chatLog');
-    const input = document.getElementById('chatInput');
-    const send = document.getElementById('chatSend');
-    if (!send) return;
-    send.addEventListener('click', async () => {
-      const m = input.value.trim();
-      if (!m) return;
-      log.innerHTML += `<div class="chat-msg user">${escapeHtml(m)}</div>`;
-      input.value = '';
-      try {
-        const r = await api.post('/api/ai/chat', { message: m });
-        log.innerHTML += `<div class="chat-msg bot">${escapeHtml(r.reply)}</div>`;
-        log.scrollTop = log.scrollHeight;
-      } catch (e) {
-        log.innerHTML += `<div class="chat-msg bot">Error: ${escapeHtml(e.message)}</div>`;
+      if (!filtered.length) {
+        body.innerHTML = '<p style="color:var(--color-text-muted)">No matching items.</p>';
+        return;
       }
-    });
+      body.innerHTML =
+        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Course</th><th>Student</th><th>Actions</th></tr></thead><tbody>' +
+        filtered
+          .map((e) => {
+            const name =
+              (e.personal && (e.personal.first_name || '') + ' ' + (e.personal.last_name || '')) || '—';
+            return (
+              '<tr><td>#' +
+              e.id +
+              '</td><td>' +
+              UI.escapeHtml(e.course_code || '') +
+              '</td><td>' +
+              UI.escapeHtml(name) +
+              '</td><td><button type="button" class="ds-btn ds-btn--primary q-appr" data-eid="' +
+              e.id +
+              '" style="width:auto;padding:0.35rem 0.65rem;font-size:0.8rem;margin-right:0.35rem">Approve</button><button type="button" class="ds-btn ds-btn--ghost q-rej" data-eid="' +
+              e.id +
+              '" style="width:auto;padding:0.35rem 0.65rem;font-size:0.8rem">Reject</button></td></tr>'
+            );
+          })
+          .join('') +
+        '</tbody></table></div>';
+
+      body.querySelectorAll('.q-appr').forEach((b) => b.addEventListener('click', () => queueDecision(b.getAttribute('data-eid'), 'approve', decideUrl, phase)));
+      body.querySelectorAll('.q-rej').forEach((b) => b.addEventListener('click', () => queueDecision(b.getAttribute('data-eid'), 'reject', decideUrl, phase)));
+    }
+
+    search.oninput = () => render(search.value);
+    render('');
   }
 
-  function escapeHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+  async function queueDecision(id, act, decideUrl, phase) {
+    const bodyHtml =
+      '<p style="color:var(--color-text-muted)">Enrollment <strong>#' +
+      id +
+      '</strong></p><label style="font-weight:600">Notes (optional)</label><textarea name="modal-notes" class="modal-notes" placeholder="Add remarks for the student record"></textarea>';
+    const res = await UI.openModal({
+      title: act === 'approve' ? 'Approve request' : 'Reject request',
+      bodyHtml: bodyHtml,
+      confirmText: act === 'approve' ? 'Approve' : 'Reject',
+      cancelText: 'Cancel',
+      danger: act === 'reject',
+    });
+    if (!res || !res.confirm) return;
+    const url =
+      phase === 3 ? '/api/enrollment/' + id + '/phase3/decision' : decideUrl.replace('{id}', id);
+    try {
+      await api.post(url, {
+        status: act === 'approve' ? 'Approved' : 'Rejected',
+        notes: res.notes || '',
+      });
+      UI.toast('success', 'Record updated.');
+      if (queueReload) await queueReload();
+    } catch (e) {
+      UI.toast('error', e.message);
+    }
+  }
+
+  async function loadSaoQueue() {
+    document.getElementById('queueTitle').textContent = 'Student Affairs — ID validation (Phase 3)';
+    const body = document.getElementById('queueBody');
+    const search = document.getElementById('queueSearch');
+    const rows = await api.get('/api/enrollment/queue/sao');
+    queueReload = () => loadSaoQueue();
+
+    function render(filter) {
+      const q = (filter || '').toLowerCase();
+      const filtered = rows.filter((e) => {
+        if (!q) return true;
+        const name = (e.personal && (e.personal.first_name || '') + ' ' + (e.personal.last_name || '')) || '';
+        return String(e.id).includes(q) || (e.course_code && e.course_code.toLowerCase().includes(q)) || name.toLowerCase().includes(q);
+      });
+      if (!filtered.length) {
+        body.innerHTML = '<p style="color:var(--color-text-muted)">No pending items.</p>';
+        return;
+      }
+      body.innerHTML =
+        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Course</th><th>Student</th><th>Actions</th></tr></thead><tbody>' +
+        filtered
+          .map(
+            (e) =>
+              '<tr><td>#' +
+              e.id +
+              '</td><td>' +
+              UI.escapeHtml(e.course_code || '') +
+              '</td><td>' +
+              UI.escapeHtml((e.personal && e.personal.first_name + ' ' + e.personal.last_name) || '') +
+              '</td><td><button type="button" class="ds-btn ds-btn--primary sao-ok" data-id="' +
+              e.id +
+              '" style="width:auto;padding:0.35rem 0.65rem;font-size:0.8rem;margin-right:0.35rem">Validate ID</button><button type="button" class="ds-btn ds-btn--ghost sao-no" data-id="' +
+              e.id +
+              '" style="width:auto;padding:0.35rem 0.65rem;font-size:0.8rem">Reject</button></td></tr>'
+          )
+          .join('') +
+        '</tbody></table></div>';
+      body.querySelectorAll('.sao-ok').forEach((b) =>
+        b.addEventListener('click', () => queueDecision(b.getAttribute('data-id'), 'approve', '', 3))
+      );
+      body.querySelectorAll('.sao-no').forEach((b) =>
+        b.addEventListener('click', () => queueDecision(b.getAttribute('data-id'), 'reject', '', 3))
+      );
+    }
+    search.oninput = () => render(search.value);
+    render('');
   }
 
   function wireIrregular() {
@@ -377,13 +784,13 @@
       try {
         const r = await api.get('/api/ai/irregular-check?course_id=' + cid + '&seed_demo=true');
         out.textContent = JSON.stringify(r, null, 2);
+        UI.toast('success', 'Demo progress seeded.');
       } catch (e) {
         out.textContent = e.message;
       }
     });
   }
 
-  /** Prefill draft from latest enrollment */
   async function prefillDraft() {
     try {
       const list = await api.get('/api/enrollment/mine');
@@ -442,23 +849,59 @@
     }
   }
 
+  /* ---- FAB Chat ---- */
+  const fab = document.getElementById('fabChat');
+  const drawer = document.getElementById('chatDrawer');
+  const chatLog = document.getElementById('chatDrawerLog');
+  const chatIn = document.getElementById('chatDrawerInput');
+  const chatSend = document.getElementById('chatDrawerSend');
+  document.getElementById('chatClose').addEventListener('click', () => {
+    drawer.classList.remove('is-open');
+    drawer.setAttribute('aria-hidden', 'true');
+  });
+  fab.addEventListener('click', () => {
+    drawer.classList.toggle('is-open');
+    drawer.setAttribute('aria-hidden', drawer.classList.contains('is-open') ? 'false' : 'true');
+  });
+  async function sendChat() {
+    const m = chatIn.value.trim();
+    if (!m) return;
+    chatIn.value = '';
+    chatLog.innerHTML +=
+      '<div class="chat-msg chat-msg--user">' + UI.escapeHtml(m) + '</div>';
+    chatLog.scrollTop = chatLog.scrollHeight;
+    try {
+      const r = await api.post('/api/ai/chat', { message: m });
+      chatLog.innerHTML += '<div class="chat-msg chat-msg--bot">' + UI.escapeHtml(r.reply) + '</div>';
+    } catch (e) {
+      chatLog.innerHTML += '<div class="chat-msg chat-msg--bot">' + UI.escapeHtml(e.message) + '</div>';
+    }
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  chatSend.addEventListener('click', sendChat);
+  chatIn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendChat();
+  });
+
   const views = {
     home: async () => {
+      setPageHead('Dashboard', 'Overview and quick status');
       showView('');
       if (role === 'Student') {
         main.appendChild(cloneTpl('tpl-student-home'));
         await refreshTracker();
+        await loadHistory();
         await loadAssistantSteps();
         wireIrregular();
       } else if (role === 'Admin') {
-        main.innerHTML =
-          '<div class="card"><h2>Administration</h2><p style="color:var(--muted)">Use the sidebar for analytics and announcements.</p></div>';
+        main.appendChild(cloneTpl('tpl-admin-home'));
+        await loadAdminHome();
       } else {
-        main.innerHTML =
-          '<div class="card"><h2>Dashboard</h2><p style="color:var(--muted)">Select a queue from the sidebar.</p></div>';
+        main.appendChild(cloneTpl('tpl-staff-home'));
       }
     },
     form: async () => {
+      setPageHead('Enrollment application', 'Multi-step wizard — validate each section before continuing');
       showView('');
       main.appendChild(cloneTpl('tpl-form'));
       await loadCourses();
@@ -466,138 +909,129 @@
       await prefillDraft();
     },
     payments: () => {
+      setPageHead('Payments', 'Upload official receipt for Accounting verification');
       showView('');
       main.appendChild(cloneTpl('tpl-payments'));
       wirePayments();
-      loadPaymentList();
+    },
+    payverify: async () => {
+      setPageHead('Payment verification', 'Review and approve uploaded receipts');
+      showView('');
+      main.appendChild(cloneTpl('tpl-payverify'));
+      await loadPayVerify();
     },
     notify: async () => {
+      setPageHead('Notifications', 'Alerts from enrollment workflow');
       showView('');
       main.appendChild(cloneTpl('tpl-notify'));
       await loadNotifications();
     },
     announce: async () => {
+      setPageHead('Announcements', 'Institutional updates');
       showView('');
       main.appendChild(cloneTpl('tpl-announce'));
       await loadAnnouncements();
     },
     reports: async () => {
+      setPageHead('Analytics', 'Enrollment metrics and distribution');
       showView('');
       main.appendChild(cloneTpl('tpl-reports'));
-      await loadReports();
-    },
-    chat: () => {
-      showView('');
-      main.appendChild(cloneTpl('tpl-chat'));
-      wireChat();
+      await loadReportsView();
     },
     qreg: async () => {
+      setPageHead('Registrar queue', 'New student applications — Phase 2');
       showView('');
       main.appendChild(cloneTpl('tpl-queue'));
       await loadQueue(
         '/api/enrollment/queue/registrar',
-        'Registrar — new student approvals',
-        '/api/enrollment/{id}/phase2/decision'
+        'Pending approvals',
+        '/api/enrollment/{id}/phase2/decision',
+        2
       );
     },
     qacc: async () => {
+      setPageHead('Accounting queue', 'Returning students — confirm payment before approval');
       showView('');
       main.appendChild(cloneTpl('tpl-queue'));
       await loadQueue(
         '/api/enrollment/queue/accounting',
-        'Accounting — payment verification queue',
-        '/api/enrollment/{id}/phase2/decision'
+        'Pending verification',
+        '/api/enrollment/{id}/phase2/decision',
+        2
       );
     },
     qsao: async () => {
+      setPageHead('ID validation', 'Student Affairs — Phase 3');
       showView('');
       main.appendChild(cloneTpl('tpl-queue'));
-      const body = document.getElementById('queueBody');
-      document.getElementById('queueTitle').textContent = 'Student Affairs — ID validation (Phase 3)';
-      const rows = await api.get('/api/enrollment/queue/sao');
-      if (!rows.length) {
-        body.innerHTML = '<p style="color:var(--muted)">No pending items.</p>';
-        return;
-      }
-      body.innerHTML = rows
-        .map(
-          (e) =>
-            `<div class="card" style="padding:0.75rem;margin-bottom:0.5rem"><strong>#${e.id}</strong> ${e.course_code || ''}
-          <div style="margin-top:0.5rem;display:flex;gap:0.5rem"><button class="btn btn-primary" data-id="${e.id}" data-a="ok">Approve</button><button class="btn btn-ghost" data-id="${e.id}" data-a="no">Reject</button></div></div>`
-        )
-        .join('');
-      body.querySelectorAll('button').forEach((b) => {
-        b.addEventListener('click', async () => {
-          const id = b.getAttribute('data-id');
-          const ok = b.getAttribute('data-a') === 'ok';
-          const notes = prompt('Notes:') || '';
-          await api.post('/api/enrollment/' + id + '/phase3/decision', {
-            status: ok ? 'Approved' : 'Rejected',
-            notes,
-          });
-          await views.qsao();
-        });
-      });
+      await loadSaoQueue();
     },
   };
 
   const navDef = [];
-  if (role === 'Student') {
-    navDef.push(['home', 'Overview', () => views.home()]);
-    navDef.push(['form', 'Enrollment form', () => views.form()]);
-    navDef.push(['payments', 'Payments', () => views.payments()]);
-    navDef.push(['notify', 'Notifications', () => views.notify()]);
-    navDef.push(['announce', 'Announcements', () => views.announce()]);
-    navDef.push(['chat', 'AI assistant', () => views.chat()]);
-  }
-  if (role === 'Admin') {
-    navDef.push(['home', 'Overview', () => views.home()]);
-    navDef.push(['reports', 'Reports', () => views.reports()]);
-    navDef.push(['announce', 'Announcements', () => views.announce()]);
-    navDef.push(['qreg', 'Registrar queue', () => views.qreg()]);
-    navDef.push(['qacc', 'Accounting queue', () => views.qacc()]);
-    navDef.push(['qsao', 'SAO queue', () => views.qsao()]);
-    navDef.push(['chat', 'AI assistant', () => views.chat()]);
-  }
-  if (role === 'Registrar') {
-    navDef.push(['qreg', 'My queue', () => views.qreg()]);
-    navDef.push(['announce', 'Announcements', () => views.announce()]);
-    navDef.push(['notify', 'Notifications', () => views.notify()]);
-  }
-  if (role === 'Accounting') {
-    navDef.push(['qacc', 'Payment queue', () => views.qacc()]);
-    navDef.push(['announce', 'Announcements', () => views.announce()]);
-    navDef.push(['notify', 'Notifications', () => views.notify()]);
-  }
-  if (role === 'Student Affairs Office') {
-    navDef.push(['qsao', 'ID validation', () => views.qsao()]);
-    navDef.push(['announce', 'Announcements', () => views.announce()]);
-    navDef.push(['notify', 'Notifications', () => views.notify()]);
+  function addNav(id, label, iconHtml, fn) {
+    navDef.push([id, label, iconHtml, fn]);
   }
 
-  let active = navDef[0] ? navDef[0][0] : 'home';
+  if (role === 'Student') {
+    addNav('home', 'Overview', ic.home, () => views.home());
+    addNav('form', 'Enrollment', ic.form, () => views.form());
+    addNav('payments', 'Payments', ic.pay, () => views.payments());
+    addNav('notify', 'Notifications', ic.bell, () => views.notify());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+  }
+  if (role === 'Admin') {
+    addNav('home', 'Overview', ic.home, () => views.home());
+    addNav('reports', 'Analytics', ic.chart, () => views.reports());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+    addNav('qreg', 'Registrar queue', ic.queue, () => views.qreg());
+    addNav('qacc', 'Accounting queue', ic.queue, () => views.qacc());
+    addNav('payverify', 'Verify receipts', ic.verify, () => views.payverify());
+    addNav('qsao', 'SAO queue', ic.idcard, () => views.qsao());
+  }
+  if (role === 'Registrar') {
+    addNav('qreg', 'My queue', ic.queue, () => views.qreg());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+    addNav('notify', 'Notifications', ic.bell, () => views.notify());
+  }
+  if (role === 'Accounting') {
+    addNav('qacc', 'Enrollment queue', ic.queue, () => views.qacc());
+    addNav('payverify', 'Verify receipts', ic.verify, () => views.payverify());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+    addNav('notify', 'Notifications', ic.bell, () => views.notify());
+  }
+  if (role === 'Student Affairs Office') {
+    addNav('qsao', 'ID validation', ic.idcard, () => views.qsao());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+    addNav('notify', 'Notifications', ic.bell, () => views.notify());
+  }
+
   nav.innerHTML = navDef
     .map(
-      ([id, label]) =>
-        `<a class="nav-link" data-view="${id}">${label}</a>`
+      ([id, label, iconHtml]) =>
+        '<button type="button" class="nav-link" data-view="' +
+        id +
+        '">' +
+        iconHtml +
+        '<span>' +
+        label +
+        '</span></button>'
     )
     .join('');
 
   nav.querySelectorAll('.nav-link').forEach((a) => {
-    a.addEventListener('click', (ev) => {
-      ev.preventDefault();
+    a.addEventListener('click', () => {
       const id = a.getAttribute('data-view');
-      active = id;
       nav.querySelectorAll('.nav-link').forEach((x) => x.classList.remove('active'));
       a.classList.add('active');
-      const fn = navDef.find((x) => x[0] === id);
-      if (fn) fn[2]();
+      const item = navDef.find((x) => x[0] === id);
+      if (item) item[3]();
       closeMenu();
     });
   });
 
   if (navDef[0]) {
     nav.querySelector('.nav-link').classList.add('active');
-    navDef[0][2]();
+    navDef[0][3]();
   }
 })();

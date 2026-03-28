@@ -3,333 +3,455 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard — SEAIT Enrollment</title>
-    <link rel="stylesheet" href="css/main.css" />
+    <title>Portal — SEAIT Enrollment</title>
+    <link rel="stylesheet" href="css/design-system.css" />
   </head>
-  <body>
-    <div class="overlay" id="overlay"></div>
-    <button type="button" class="menu-toggle" id="menuBtn" aria-label="Menu">☰</button>
-    <div class="layout">
-      <aside class="sidebar" id="sidebar">
-        <div class="brand">
-          <div class="brand-logo">SE</div>
-          <div>
-            <div style="font-weight: 700">SEAIT</div>
-            <div style="font-size: 0.75rem; color: var(--muted)">Enrollment</div>
-          </div>
-        </div>
-        <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem" id="userLine"></div>
-        <nav id="nav"></nav>
-        <button type="button" class="btn btn-ghost" style="width: 100%; margin-top: 1.5rem" id="logoutBtn">
-          Log out
+  <body class="app-dashboard page-enter">
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    <div id="modal-root"></div>
+
+    <button type="button" class="fab-chat" id="fabChat" aria-label="Open AI assistant" title="AI Assistant">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.89-1.96C9.08 20.64 10.5 21 12 21c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.35-3.82-.96l-.27-.15-3.09 1.04 1.04-3.09-.18-.29C5.35 14.68 5 13.39 5 12c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"
+        />
+      </svg>
+    </button>
+    <div class="chat-drawer" id="chatDrawer" aria-hidden="true">
+      <div class="chat-drawer__head">
+        <span>Enrollment Assistant</span>
+        <button type="button" class="modal-close" id="chatClose" style="color: #fff" aria-label="Close chat">
+          &times;
         </button>
-      </aside>
-      <div class="main" id="main">
-        <!-- Dynamic sections injected / toggled -->
-        <div id="view-home" class="view"></div>
+      </div>
+      <div class="chat-drawer__log" id="chatDrawerLog"></div>
+      <div class="chat-drawer__input-row">
+        <input type="text" id="chatDrawerInput" placeholder="Ask about phases, payments…" />
+        <button type="button" class="ds-btn ds-btn--primary" id="chatDrawerSend" style="width: auto; padding: 0.55rem 1rem">
+          Send
+        </button>
       </div>
     </div>
 
-    <!-- Templates: enrollment form (Student) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <header class="app-header">
+      <div class="app-header__left">
+        <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="app-header__logo">SE</div>
+        <div class="app-header__titles">
+          <h1>SEAIT Enrollment</h1>
+          <span>Official student &amp; staff portal</span>
+        </div>
+      </div>
+      <div class="app-header__right">
+        <div class="app-header__user">
+          <div id="headerUserName">—</div>
+          <div class="app-header__role" id="headerUserRole">—</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <aside class="app-sidebar" id="sidebar">
+        <nav class="app-sidebar__nav" id="nav"></nav>
+        <div class="app-sidebar__logout">
+          <button type="button" class="ds-btn ds-btn--ghost" id="logoutBtn" style="width: 100%">Log out</button>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="page-head">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle"></p>
+        </div>
+        <div id="main"></div>
+      </main>
+    </div>
+
+    <!-- Student home -->
     <template id="tpl-student-home">
-      <div class="card">
+      <div class="ds-card">
         <h2>Enrollment progress</h2>
-        <p style="color: var(--muted)">You cannot advance until each phase is completed.</p>
+        <p style="color: var(--color-text-muted); margin-top: 0">Phases must complete in order. You cannot skip ahead.</p>
         <div id="trackerMount"></div>
       </div>
-      <div class="card">
-        <h2>Smart assistant</h2>
+      <div class="ds-card">
+        <h2>Enrollment history</h2>
+        <div id="historyMount"></div>
+      </div>
+      <div class="ds-card">
+        <h2>Smart assistant — next steps</h2>
         <div id="stepsMount"></div>
       </div>
-      <div class="card">
+      <div class="ds-card">
         <h2>Irregular student check</h2>
-        <p style="color: var(--muted); font-size: 0.9rem">
-          Simulated curriculum gap detection (BSIT demo curriculum).
-        </p>
+        <p class="smart-hint">Simulated curriculum comparison (demo data for BSIT).</p>
         <div class="grid-2">
-          <div>
-            <label>Course ID (from catalog)</label>
+          <div class="ds-field-inline">
+            <label>Course ID</label>
             <input type="number" id="irrCourse" placeholder="1" min="1" />
           </div>
-          <div style="display: flex; align-items: flex-end; gap: 0.5rem">
-            <button type="button" class="btn btn-ghost" id="irrSeed">Seed demo progress</button>
-            <button type="button" class="btn btn-primary" id="irrRun">Analyze</button>
+          <div style="display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap">
+            <button type="button" class="ds-btn ds-btn--ghost" id="irrSeed">Seed demo</button>
+            <button type="button" class="ds-btn ds-btn--primary" id="irrRun" style="width: auto">Analyze</button>
           </div>
         </div>
-        <pre id="irrOut" style="color: var(--muted); white-space: pre-wrap; font-size: 0.85rem"></pre>
+        <pre id="irrOut" style="color: var(--color-text-muted); white-space: pre-wrap; font-size: 0.85rem; margin: 1rem 0 0"></pre>
       </div>
     </template>
 
+    <!-- Admin home -->
+    <template id="tpl-admin-home">
+      <div class="stat-grid" id="adminStatGrid"></div>
+      <div class="ds-card">
+        <h2>Enrollment pipeline</h2>
+        <div class="chart-row" id="adminChartRow"></div>
+      </div>
+      <div class="ds-card">
+        <h2>Recent activity</h2>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem">
+          Live audit streams can be connected here. System is operational and accepting enrollments.
+        </p>
+        <div class="ds-table-wrap">
+          <table class="ds-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="activityTbody">
+              <tr>
+                <td>—</td>
+                <td>Portal ready</td>
+                <td><span class="badge badge--ok">Active</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- Wizard enrollment -->
     <template id="tpl-form">
-      <div class="card">
+      <div class="ds-card">
         <h2>Enrollment application</h2>
+        <p class="smart-hint" id="wizardSmartHint">
+          Complete each step. Use <strong>Next</strong> to validate the current section. Save a draft anytime once all
+          fields are valid.
+        </p>
         <div id="formMsg"></div>
+        <div class="wizard-progress">
+          <div class="wizard-progress__track">
+            <div class="wizard-progress__fill" id="wizardFill" style="width: 20%"></div>
+          </div>
+          <span class="wizard-steps-label" id="wizardStepLabel">Step 1 of 5</span>
+        </div>
         <form id="enrollmentForm">
           <input type="hidden" name="enrollment_id" id="enrollment_id" />
-          <div class="section-title">Program</div>
-          <div class="grid-2">
-            <div>
-              <label>Category</label>
-              <select name="category" id="category" required>
-                <option value="New">New</option>
-                <option value="2nd Year">2nd Year</option>
-                <option value="3rd Year">3rd Year</option>
-                <option value="4th Year">4th Year</option>
-              </select>
+
+          <div class="wizard-panel is-active" data-wizard-step="1">
+            <div class="section-label">Program &amp; personal</div>
+            <div class="grid-2">
+              <div class="ds-field-inline">
+                <label>Category *</label>
+                <select name="category" id="category" required data-step-req="1">
+                  <option value="New">New</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                </select>
+              </div>
+              <div class="ds-field-inline">
+                <label>Course *</label>
+                <select name="course_id" id="course_id" required data-step-req="1"></select>
+              </div>
+              <div class="ds-field-inline">
+                <label>Academic year *</label>
+                <input name="academic_year" id="academic_year" placeholder="2026-2027" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Semester *</label>
+                <select name="semester" id="semester" required data-step-req="1">
+                  <option>1st Semester</option>
+                  <option>2nd Semester</option>
+                  <option>Summer</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label>Course</label>
-              <select name="course_id" id="course_id" required></select>
+            <div class="grid-3">
+              <div class="ds-field-inline">
+                <label>Last name *</label>
+                <input name="plast" id="plast" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>First name *</label>
+                <input name="pfirst" id="pfirst" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Middle name</label>
+                <input name="pmid" id="pmid" />
+              </div>
             </div>
-            <div>
-              <label>Academic year</label>
-              <input name="academic_year" id="academic_year" placeholder="2026-2027" required />
-            </div>
-            <div>
-              <label>Semester</label>
-              <select name="semester" id="semester" required>
-                <option>1st Semester</option>
-                <option>2nd Semester</option>
-                <option>Summer</option>
-              </select>
+            <div class="grid-2">
+              <div class="ds-field-inline">
+                <label>Extension</label>
+                <input name="pext" id="pext" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Sex *</label>
+                <select name="sex" id="sex" required data-step-req="1">
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="ds-field-inline">
+                <label>Date of birth *</label>
+                <input type="date" name="dob" id="dob" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Birthplace *</label>
+                <input name="birthplace" id="birthplace" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Civil status *</label>
+                <input name="civil" id="civil" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Citizenship *</label>
+                <input name="citizen" id="citizen" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Contact number *</label>
+                <input name="pcontact" id="pcontact" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Email *</label>
+                <input type="email" name="pemail" id="pemail" required data-step-req="1" />
+              </div>
+              <div class="ds-field-inline" style="grid-column: 1 / -1">
+                <label>Permanent address *</label>
+                <textarea name="perm" id="perm" rows="2" required data-step-req="1"></textarea>
+              </div>
+              <div class="ds-field-inline" style="grid-column: 1 / -1">
+                <label>Current address *</label>
+                <textarea name="curr" id="curr" rows="2" required data-step-req="1"></textarea>
+              </div>
             </div>
           </div>
 
-          <div class="section-title">Personal information</div>
-          <div class="grid-3">
-            <div>
-              <label>Last name</label>
-              <input name="plast" id="plast" required />
-            </div>
-            <div>
-              <label>First name</label>
-              <input name="pfirst" id="pfirst" required />
-            </div>
-            <div>
-              <label>Middle name</label>
-              <input name="pmid" id="pmid" />
-            </div>
-          </div>
-          <div class="grid-2">
-            <div>
-              <label>Name extension (Jr., III)</label>
-              <input name="pext" id="pext" />
-            </div>
-            <div>
-              <label>Sex</label>
-              <select name="sex" id="sex" required>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div>
-              <label>Date of birth</label>
-              <input type="date" name="dob" id="dob" required />
-            </div>
-            <div>
-              <label>Birthplace</label>
-              <input name="birthplace" id="birthplace" required />
-            </div>
-            <div>
-              <label>Civil status</label>
-              <input name="civil" id="civil" required />
-            </div>
-            <div>
-              <label>Citizenship</label>
-              <input name="citizen" id="citizen" required />
-            </div>
-            <div>
-              <label>Contact number</label>
-              <input name="pcontact" id="pcontact" required />
-            </div>
-            <div>
-              <label>Email</label>
-              <input type="email" name="pemail" id="pemail" required />
-            </div>
-            <div style="grid-column: 1 / -1">
-              <label>Permanent address</label>
-              <textarea name="perm" id="perm" rows="2" required></textarea>
-            </div>
-            <div style="grid-column: 1 / -1">
-              <label>Current address</label>
-              <textarea name="curr" id="curr" rows="2" required></textarea>
+          <div class="wizard-panel" data-wizard-step="2">
+            <div class="section-label">Family information</div>
+            <div class="grid-2">
+              <div class="ds-field-inline">
+                <label>Father's name</label>
+                <input name="father_name" id="father_name" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Father's occupation</label>
+                <input name="father_occ" id="father_occ" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Father's contact</label>
+                <input name="father_contact" id="father_contact" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Mother's name</label>
+                <input name="mother_name" id="mother_name" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Mother's occupation</label>
+                <input name="mother_occ" id="mother_occ" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Mother's contact</label>
+                <input name="mother_contact" id="mother_contact" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Spouse name</label>
+                <input name="spouse_name" id="spouse_name" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Spouse occupation</label>
+                <input name="spouse_occ" id="spouse_occ" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Spouse contact</label>
+                <input name="spouse_contact" id="spouse_contact" />
+              </div>
             </div>
           </div>
 
-          <div class="section-title">Family information</div>
-          <div class="grid-2">
-            <div>
-              <label>Father's name</label>
-              <input name="father_name" id="father_name" />
-            </div>
-            <div>
-              <label>Father's occupation</label>
-              <input name="father_occ" id="father_occ" />
-            </div>
-            <div>
-              <label>Father's contact</label>
-              <input name="father_contact" id="father_contact" />
-            </div>
-            <div>
-              <label>Mother's name</label>
-              <input name="mother_name" id="mother_name" />
-            </div>
-            <div>
-              <label>Mother's occupation</label>
-              <input name="mother_occ" id="mother_occ" />
-            </div>
-            <div>
-              <label>Mother's contact</label>
-              <input name="mother_contact" id="mother_contact" />
-            </div>
-            <div>
-              <label>Spouse name</label>
-              <input name="spouse_name" id="spouse_name" />
-            </div>
-            <div>
-              <label>Spouse occupation</label>
-              <input name="spouse_occ" id="spouse_occ" />
-            </div>
-            <div>
-              <label>Spouse contact</label>
-              <input name="spouse_contact" id="spouse_contact" />
+          <div class="wizard-panel" data-wizard-step="3">
+            <div class="section-label">Academic background</div>
+            <div class="grid-2">
+              <div class="ds-field-inline">
+                <label>Elementary school *</label>
+                <input name="elem_school" id="elem_school" required data-step-req="3" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Year graduated</label>
+                <input name="elem_year" id="elem_year" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Junior high *</label>
+                <input name="jhs_school" id="jhs_school" required data-step-req="3" />
+              </div>
+              <div class="ds-field-inline">
+                <label>JHS year</label>
+                <input name="jhs_year" id="jhs_year" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Senior high *</label>
+                <input name="shs_school" id="shs_school" required data-step-req="3" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Strand / track</label>
+                <input name="shs_strand" id="shs_strand" />
+              </div>
+              <div class="ds-field-inline">
+                <label>SHS year</label>
+                <input name="shs_year" id="shs_year" />
+              </div>
             </div>
           </div>
 
-          <div class="section-title">Academic background</div>
-          <div class="grid-2">
-            <div>
-              <label>Elementary school</label>
-              <input name="elem_school" id="elem_school" required />
-            </div>
-            <div>
-              <label>Year graduated</label>
-              <input name="elem_year" id="elem_year" />
-            </div>
-            <div>
-              <label>Junior high school</label>
-              <input name="jhs_school" id="jhs_school" required />
-            </div>
-            <div>
-              <label>Year completed</label>
-              <input name="jhs_year" id="jhs_year" />
-            </div>
-            <div>
-              <label>Senior high school</label>
-              <input name="shs_school" id="shs_school" required />
-            </div>
-            <div>
-              <label>Strand / track</label>
-              <input name="shs_strand" id="shs_strand" />
-            </div>
-            <div>
-              <label>Year graduated</label>
-              <input name="shs_year" id="shs_year" />
+          <div class="wizard-panel" data-wizard-step="4">
+            <div class="section-label">Emergency contact</div>
+            <div class="grid-2">
+              <div class="ds-field-inline">
+                <label>Full name *</label>
+                <input name="e_name" id="e_name" required data-step-req="4" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Contact *</label>
+                <input name="e_contact" id="e_contact" required data-step-req="4" />
+              </div>
+              <div class="ds-field-inline">
+                <label>Relationship *</label>
+                <input name="e_rel" id="e_rel" required data-step-req="4" />
+              </div>
+              <div class="ds-field-inline" style="grid-column: 1 / -1">
+                <label>Address *</label>
+                <textarea name="e_addr" id="e_addr" rows="2" required data-step-req="4"></textarea>
+              </div>
             </div>
           </div>
 
-          <div class="section-title">Emergency contact</div>
-          <div class="grid-2">
-            <div>
-              <label>Full name</label>
-              <input name="e_name" id="e_name" required />
-            </div>
-            <div>
-              <label>Contact number</label>
-              <input name="e_contact" id="e_contact" required />
-            </div>
-            <div>
-              <label>Relationship</label>
-              <input name="e_rel" id="e_rel" required />
-            </div>
-            <div style="grid-column: 1 / -1">
-              <label>Address</label>
-              <textarea name="e_addr" id="e_addr" rows="2" required></textarea>
-            </div>
+          <div class="wizard-panel" data-wizard-step="5">
+            <div class="section-label">Review</div>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem">Confirm your information before submitting.</p>
+            <div id="reviewMount" style="font-size: 0.9rem; line-height: 1.6"></div>
           </div>
 
-          <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap">
-            <button type="button" class="btn btn-ghost" id="saveDraft">Save draft</button>
-            <button type="submit" class="btn btn-primary" id="submitForm">Submit application</button>
+          <div class="wizard-actions">
+            <button type="button" class="ds-btn ds-btn--ghost" id="wizPrev" style="display: none">Previous</button>
+            <button type="button" class="ds-btn ds-btn--primary" id="wizNext" style="width: auto">Next step</button>
+            <button type="button" class="ds-btn ds-btn--ghost" id="saveDraft">Save draft</button>
+            <button type="submit" class="ds-btn ds-btn--primary" id="submitForm" style="display: none; width: auto">
+              Submit application
+            </button>
           </div>
         </form>
       </div>
     </template>
 
     <template id="tpl-payments">
-      <div class="card">
+      <div class="ds-card">
         <h2>Payment upload</h2>
-        <p style="color: var(--muted)">For 2nd–4th year students routed to Accounting. Upload a clear receipt image or PDF.</p>
+        <p class="smart-hint">For 2nd–4th year students on the Accounting path. Upload a clear receipt (JPG, PNG, PDF).</p>
         <div id="payMsg"></div>
         <div class="grid-2">
-          <div>
-            <label>Enrollment ID</label>
+          <div class="ds-field-inline">
+            <label>Enrollment ID *</label>
             <input type="number" id="payEnrollId" min="1" />
           </div>
-          <div>
+          <div class="ds-field-inline">
             <label>Amount (PHP)</label>
             <input type="text" id="payAmount" placeholder="15000.00" />
           </div>
-          <div style="grid-column: 1 / -1">
-            <label>Receipt file</label>
+          <div class="ds-field-inline" style="grid-column: 1 / -1">
+            <label>Receipt file *</label>
             <input type="file" id="payFile" accept=".jpg,.jpeg,.png,.pdf,.webp" />
           </div>
         </div>
-        <button type="button" class="btn btn-primary" id="payUpload">Upload receipt</button>
-        <div id="payList" style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted)"></div>
+        <button type="button" class="ds-btn ds-btn--primary" id="payUpload" style="width: auto; margin-top: 0.75rem">
+          Upload receipt
+        </button>
+        <div id="payList" style="margin-top: 1rem; font-size: 0.9rem; color: var(--color-text-muted)"></div>
+      </div>
+    </template>
+
+    <template id="tpl-payverify">
+      <div class="ds-card">
+        <h2>Payment verification</h2>
+        <p style="color: var(--color-text-muted)">Review uploaded receipts and approve or reject before closing phase 2.</p>
+        <div id="payVerifyMount"></div>
       </div>
     </template>
 
     <template id="tpl-notify">
-      <div class="card">
+      <div class="ds-card">
         <h2>Notifications</h2>
         <div id="notifyList"></div>
       </div>
     </template>
 
     <template id="tpl-announce">
-      <div class="card">
+      <div class="ds-card">
         <h2>Announcements</h2>
         <div id="announceList"></div>
       </div>
-      <div class="card hidden" id="adminAnnounce">
-        <h3>Post announcement (Admin)</h3>
-        <label>Title</label>
-        <input id="anTitle" />
-        <label>Body</label>
-        <textarea id="anBody" rows="4"></textarea>
-        <button type="button" class="btn btn-primary" id="anPost" style="margin-top: 0.75rem">Publish</button>
+      <div class="ds-card hidden" id="adminAnnounce">
+        <h3>Post announcement</h3>
+        <div class="ds-field-inline">
+          <label>Title</label>
+          <input id="anTitle" />
+        </div>
+        <div class="ds-field-inline">
+          <label>Body</label>
+          <textarea id="anBody" rows="4"></textarea>
+        </div>
+        <button type="button" class="ds-btn ds-btn--primary" id="anPost" style="width: auto; margin-top: 0.75rem">
+          Publish
+        </button>
       </div>
     </template>
 
     <template id="tpl-reports">
-      <div class="card">
-        <h2>Analytics</h2>
-        <pre id="reportOut" style="color: var(--muted)"></pre>
+      <div class="stat-grid" id="reportStatGrid"></div>
+      <div class="ds-card">
+        <h2>Enrollment distribution</h2>
+        <div class="chart-row" id="reportChartRow"></div>
+      </div>
+      <div class="ds-card">
+        <h2>Raw summary</h2>
+        <pre id="reportOut" style="color: var(--color-text-muted); font-size: 0.82rem; overflow: auto"></pre>
       </div>
     </template>
 
     <template id="tpl-queue">
-      <div class="card">
+      <div class="ds-card">
         <h2 id="queueTitle">Queue</h2>
+        <div class="ds-search">
+          <input type="search" id="queueSearch" placeholder="Search by ID, course, or name…" autocomplete="off" />
+        </div>
         <div id="queueBody"></div>
       </div>
     </template>
 
-    <template id="tpl-chat">
-      <div class="card">
-        <h2>AI enrollment assistant</h2>
-        <div class="chat-panel" id="chatLog"></div>
-        <div class="grid-2">
-          <input id="chatInput" placeholder="Ask about phases, payments, deadlines…" />
-          <button type="button" class="btn btn-primary" id="chatSend">Send</button>
-        </div>
+    <template id="tpl-staff-home">
+      <div class="ds-card">
+        <h2>Welcome</h2>
+        <p style="color: var(--color-text-muted)">Select a module from the sidebar to process enrollments.</p>
       </div>
     </template>
 
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/dashboard.js"></script>
   </body>
 </html>
