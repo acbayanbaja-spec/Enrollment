@@ -1,14 +1,14 @@
-# Render Blueprint — set Root Directory to `backend` in the Render UI, or adjust paths below.
-# Create a PostgreSQL instance first; copy its Internal Database URL into DATABASE_URL.
+# Render Blueprint — builds from repo root (uses ./requirements.txt → backend/requirements.txt).
+# Start runs uvicorn from backend/ so `app.main` imports correctly.
+# Create PostgreSQL first; set DATABASE_URL to Internal URL on the Web Service.
 
 services:
   - type: web
     name: seait-enrollment-api
     runtime: python
     plan: free
-    rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"

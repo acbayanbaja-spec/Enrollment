@@ -1,0 +1,2 @@
+# Root shim for Render/GitHub: deps live in backend/
+-r backend/requirements.txt
