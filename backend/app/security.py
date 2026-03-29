@@ -4,26 +4,33 @@ Password hashing and JWT helpers.
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import get_settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 settings = get_settings()
 
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    """Bcrypt via the `bcrypt` package (avoids passlib + bcrypt 5.x compatibility issues on Render)."""
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    """Never raise — malformed hashes become failed login, not HTTP 500."""
+    if not hashed or not plain:
+        return False
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 def create_access_token(subject: str | int, extra_claims: Optional[dict[str, Any]] = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
-    to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject)}
+    # NumericDate (Unix timestamp) — avoids library/version quirks with datetime in JWT claims
+    to_encode: dict[str, Any] = {"exp": int(expire.timestamp()), "sub": str(subject)}
     if extra_claims:
         to_encode.update(extra_claims)
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)

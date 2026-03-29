@@ -4,6 +4,7 @@ Authentication: login, JWT issuance, admin user registration.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -26,12 +27,9 @@ def _user_out(u: User) -> UserOut:
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
-    user = (
-        db.query(User)
-        .options(joinedload(User.role))
-        .filter(User.email == body.email.lower().strip())
-        .first()
-    )
+    email = body.email.lower().strip()
+    stmt = select(User).options(joinedload(User.role)).where(User.email == email).limit(1)
+    user = db.execute(stmt).unique().scalar_one_or_none()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
