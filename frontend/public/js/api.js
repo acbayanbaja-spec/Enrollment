@@ -4,6 +4,21 @@
 (function () {
   const cfg = window.APP_CONFIG || { API_BASE: '' };
 
+  /** FastAPI/Pydantic returns detail as string or array of {msg, loc}; show readable text. */
+  function formatErrorDetail(detail) {
+    if (detail == null) return '';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail
+        .map(function (item) {
+          return item && typeof item.msg === 'string' ? item.msg : JSON.stringify(item);
+        })
+        .join(' ');
+    }
+    if (typeof detail === 'object' && detail.msg) return detail.msg;
+    return String(detail);
+  }
+
   function token() {
     return localStorage.getItem('access_token') || '';
   }
@@ -30,8 +45,8 @@
       data = text;
     }
     if (!res.ok) {
-      const msg = (data && data.detail) || res.statusText || 'Request failed';
-      const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const msg = formatErrorDetail(data && data.detail) || res.statusText || 'Request failed';
+      const err = new Error(msg);
       err.status = res.status;
       throw err;
     }
@@ -54,7 +69,7 @@
         throw new Error('Unauthorized');
       }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || res.statusText);
+      if (!res.ok) throw new Error(formatErrorDetail(data.detail) || res.statusText);
       return data;
     },
     /** Multipart POST without JSON (e.g. payment verify form fields). */
@@ -69,7 +84,7 @@
         throw new Error('Unauthorized');
       }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || res.statusText);
+      if (!res.ok) throw new Error(formatErrorDetail(data.detail) || res.statusText);
       return data;
     },
   };

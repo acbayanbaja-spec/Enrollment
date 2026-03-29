@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -99,7 +100,10 @@ def health_api() -> dict:
 
 
 @app.get("/")
-def root() -> dict:
+def root():
+    """Browser-friendly root: send users to the static portal; API clients use /docs or /api/*."""
+    if os.path.isdir(frontend_dir):
+        return RedirectResponse(url="/app/index.html", status_code=307)
     return {
         "message": "SEAIT Enrollment API",
         "docs": "/docs",
