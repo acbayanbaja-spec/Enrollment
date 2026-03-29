@@ -885,18 +885,20 @@
 
   const views = {
     home: async () => {
-      setPageHead('Dashboard', 'Overview and quick status');
       showView('');
       if (role === 'Student') {
+        setPageHead('Your enrollment', 'Track phases, forms, and payments — new applicants and returning students.');
         main.appendChild(cloneTpl('tpl-student-home'));
         await refreshTracker();
         await loadHistory();
         await loadAssistantSteps();
         wireIrregular();
       } else if (role === 'Admin') {
+        setPageHead('Dashboard', 'System overview and analytics');
         main.appendChild(cloneTpl('tpl-admin-home'));
         await loadAdminHome();
       } else {
+        setPageHead('Welcome', 'Choose a module from the sidebar to manage enrollments.');
         main.appendChild(cloneTpl('tpl-staff-home'));
       }
     },

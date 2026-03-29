@@ -36,7 +36,7 @@ class UserCreate(BaseModel):
 
 
 class StudentSelfRegisterRequest(BaseModel):
-    """Public self-service signup — creates a Student account only."""
+    """Public student signup — new applicants and returning (2nd–4th year) students."""
 
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)

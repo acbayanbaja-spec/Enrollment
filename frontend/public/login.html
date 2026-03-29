@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign in — SEAIT Student Portal</title>
+    <title>Sign in — SEAIT Enrollment</title>
     <link rel="stylesheet" href="css/design-system.css" />
   </head>
   <body class="page-login page-enter">
@@ -17,31 +17,31 @@
         <div class="login-brand__badge">SE</div>
         <h1>SEAIT Online Enrollment</h1>
         <p>
-          Official student portal for applications, phase tracking, and secure collaboration with
-          Registrar, Accounting, and Student Affairs.
+          One portal for students and staff — structured phases, clear handoffs between Registrar, Accounting, and Student
+          Affairs.
         </p>
         <ul class="login-brand__features">
-          <li>Phase-based workflow you can trust</li>
-          <li>Real-time status and notifications</li>
-          <li>Secure access for students and staff</li>
+          <li>Transparent, phase-based workflow</li>
+          <li>Built for new applicants and returning students</li>
+          <li>Secure, role-based access</li>
         </ul>
       </div>
       <div class="login-form-wrap">
-        <div class="login-card">
-          <a class="login-card__back" href="index.html">← Back to home</a>
+        <div class="login-card login-card--elevated">
+          <a class="login-card__back" href="index.html">← Home</a>
 
-          <div class="auth-tabs" role="tablist" aria-label="Account">
+          <div class="auth-tabs" role="tablist" aria-label="Account access">
             <button type="button" class="auth-tab is-active" id="tabSignIn" role="tab" aria-selected="true" data-panel="panelSignIn">
               Sign in
             </button>
             <button type="button" class="auth-tab" id="tabRegister" role="tab" aria-selected="false" data-panel="panelRegister">
-              New student
+              Student signup
             </button>
           </div>
 
           <div id="panelSignIn" class="auth-panel is-visible" role="tabpanel" aria-labelledby="tabSignIn">
-            <h2>Welcome back</h2>
-            <p class="login-card__sub">Use your institutional email address.</p>
+            <h2 class="login-panel-title">Welcome back</h2>
+            <p class="login-card__sub">Institutional email and password.</p>
 
             <div id="loginError" class="alert-banner alert-banner--error hidden" role="alert"></div>
             <div id="loginSuccess" class="alert-banner alert-banner--success hidden" role="status"></div>
@@ -50,7 +50,7 @@
               <div class="ds-field">
                 <label for="email">Email</label>
                 <div class="ds-input-wrap">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -59,7 +59,7 @@
                     id="email"
                     name="email"
                     autocomplete="username"
-                    placeholder="you@institution.edu.ph"
+                    placeholder="name@institution.edu.ph"
                     required
                   />
                 </div>
@@ -67,7 +67,7 @@
               <div class="ds-field">
                 <label for="password">Password</label>
                 <div class="ds-input-wrap ds-input-wrap--password">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
@@ -76,10 +76,12 @@
                     id="password"
                     name="password"
                     autocomplete="current-password"
-                    placeholder="••••••••"
+                    placeholder="Enter password"
                     required
                   />
-                  <button type="button" class="ds-toggle-pw" id="togglePw" aria-label="Show password">👁</button>
+                  <button type="button" class="ds-toggle-pw" id="togglePw" aria-label="Show password">
+                    <span class="ds-toggle-pw__text">Show</span>
+                  </button>
                 </div>
               </div>
               <div class="login-row">
@@ -89,32 +91,60 @@
                 </label>
                 <a href="#" class="login-forgot" id="forgotLink">Forgot password?</a>
               </div>
-              <button type="submit" class="ds-btn ds-btn--primary ds-btn--pulse" id="loginSubmit">Sign in</button>
+              <button type="submit" class="ds-btn ds-btn--primary" id="loginSubmit">Sign in</button>
             </form>
+
+            <section class="login-staff-hint" aria-label="Demo staff accounts">
+              <div class="login-staff-hint__head">
+                <span class="login-staff-hint__label">Demo · staff roles</span>
+                <span class="login-staff-hint__pw">Password <code>Staff@2026!</code> for each</span>
+              </div>
+              <p class="login-staff-hint__note">Use after <code>seed.py</code>. Tap a row to fill the email field.</p>
+              <div class="login-staff-grid">
+                <button type="button" class="login-staff-tile js-fill-demo" data-email="registrar@seait.edu.ph">
+                  <span class="login-staff-tile__role">Registrar</span>
+                  <span class="login-staff-tile__meta">Phase 2 · new applicants</span>
+                  <span class="login-staff-tile__email">registrar@seait.edu.ph</span>
+                </button>
+                <button type="button" class="login-staff-tile js-fill-demo" data-email="accounting@seait.edu.ph">
+                  <span class="login-staff-tile__role">Accounting</span>
+                  <span class="login-staff-tile__meta">Phase 2 · payment verification</span>
+                  <span class="login-staff-tile__email">accounting@seait.edu.ph</span>
+                </button>
+                <button type="button" class="login-staff-tile js-fill-demo" data-email="sao@seait.edu.ph">
+                  <span class="login-staff-tile__role">Student Affairs</span>
+                  <span class="login-staff-tile__meta">Phase 3 · ID validation</span>
+                  <span class="login-staff-tile__email">sao@seait.edu.ph</span>
+                </button>
+              </div>
+            </section>
           </div>
 
           <div id="panelRegister" class="auth-panel hidden" role="tabpanel" aria-labelledby="tabRegister" hidden>
-            <h2>Create student account</h2>
-            <p class="login-card__sub">Use your school email. Password at least 8 characters.</p>
+            <h2 class="login-panel-title">Student signup</h2>
+            <p class="login-card__sub">
+              For <strong>new applicants</strong> and <strong>returning students</strong> (2nd year and up). Use your
+              official school email. Minimum 8 characters for password.
+            </p>
 
             <div id="regError" class="alert-banner alert-banner--error hidden" role="alert"></div>
             <div id="regSuccess" class="alert-banner alert-banner--success hidden" role="status"></div>
 
             <form id="registerForm" novalidate>
               <div class="ds-field">
-                <label for="regName">Full name</label>
+                <label for="regName">Full legal name</label>
                 <div class="ds-input-wrap">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <input type="text" id="regName" name="full_name" autocomplete="name" placeholder="Juan Dela Cruz" required minlength="2" />
+                  <input type="text" id="regName" name="full_name" autocomplete="name" placeholder="As on school records" required minlength="2" />
                 </div>
               </div>
               <div class="ds-field">
-                <label for="regEmail">Email</label>
+                <label for="regEmail">School email</label>
                 <div class="ds-input-wrap">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                     <polyline points="22,6 12,13 2,6" />
                   </svg>
@@ -124,7 +154,7 @@
               <div class="ds-field">
                 <label for="regPassword">Password</label>
                 <div class="ds-input-wrap ds-input-wrap--password">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
@@ -133,38 +163,28 @@
                     id="regPassword"
                     name="password"
                     autocomplete="new-password"
-                    placeholder="At least 8 characters"
+                    placeholder="8+ characters"
                     required
                     minlength="8"
                   />
-                  <button type="button" class="ds-toggle-pw" id="toggleRegPw" aria-label="Show password">👁</button>
+                  <button type="button" class="ds-toggle-pw" id="toggleRegPw" aria-label="Show password">
+                    <span class="ds-toggle-pw__text">Show</span>
+                  </button>
                 </div>
               </div>
               <div class="ds-field">
                 <label for="regPassword2">Confirm password</label>
                 <div class="ds-input-wrap ds-input-wrap--password">
-                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="ds-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  <input
-                    type="password"
-                    id="regPassword2"
-                    autocomplete="new-password"
-                    placeholder="Repeat password"
-                    required
-                    minlength="8"
-                  />
+                  <input type="password" id="regPassword2" autocomplete="new-password" placeholder="Repeat password" required minlength="8" />
                 </div>
               </div>
-              <button type="submit" class="ds-btn ds-btn--primary ds-btn--pulse" id="regSubmit">Create account &amp; continue</button>
+              <button type="submit" class="ds-btn ds-btn--primary" id="regSubmit">Create account and continue</button>
             </form>
           </div>
-
-          <p class="login-demo">
-            <strong>Staff demo</strong> (after <code>seed.py</code>):<br />
-            <code>admin@seait.edu.ph</code> / <code>Admin@2026!</code>
-          </p>
         </div>
       </div>
     </div>

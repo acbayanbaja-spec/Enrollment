@@ -45,7 +45,10 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> TokenR
 def register_student(
     body: StudentSelfRegisterRequest, db: Annotated[Session, Depends(get_db)]
 ) -> TokenResponse:
-    """Create a student account and return a JWT (same as login). Requires institutional email."""
+    """
+    Self-service student signup (new applicants and returning / 2nd–4th year).
+    Returns JWT like login. Staff accounts are created by Admin only.
+    """
     email = body.email.lower().strip()
     existing = db.scalars(select(User).where(User.email == email).limit(1)).first()
     if existing:

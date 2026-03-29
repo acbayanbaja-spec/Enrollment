@@ -254,24 +254,32 @@ body {
 
 .login-card {
   width: 100%;
-  max-width: 440px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.98);
   border-radius: var(--radius-lg);
-  padding: clamp(1.75rem, 4vw, 2.25rem);
-  box-shadow: 0 12px 40px rgba(139, 69, 19, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: clamp(1.5rem, 4vw, 2rem);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 24px 48px rgba(91, 46, 12, 0.12),
+    0 8px 16px rgba(0, 0, 0, 0.04);
   animation: cardRise 0.5s var(--ease-out) 0.1s both;
+}
+
+.login-card--elevated {
+  max-width: min(460px, 100%);
 }
 
 .auth-tabs {
   display: flex;
-  gap: 0.35rem;
-  margin-bottom: 1.25rem;
-  padding: 0.25rem;
-  background: rgba(230, 81, 0, 0.08);
+  gap: 0.2rem;
+  margin-bottom: 1.35rem;
+  padding: 0.2rem;
+  background: rgba(0, 0, 0, 0.04);
   border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .auth-tab {
@@ -298,7 +306,7 @@ body {
 .auth-tab.is-active {
   background: var(--color-white);
   color: var(--rust-deep);
-  box-shadow: 0 2px 8px rgba(230, 81, 0, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .auth-panel {
@@ -321,9 +329,11 @@ body {
   }
 }
 
-.login-card .auth-panel h2 {
+.login-panel-title {
   margin: 0 0 0.35rem;
-  font-size: 1.35rem;
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--rust-deep);
 }
 
@@ -417,21 +427,27 @@ body {
 }
 
 .ds-input-wrap--password input {
-  padding-right: 2.75rem;
+  padding-right: 3.75rem;
 }
 
 .ds-toggle-pw {
   position: absolute;
-  right: 0.5rem;
+  right: 0.45rem;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.35rem;
-  color: var(--color-text-muted);
+  padding: 0.35rem 0.45rem;
+  color: var(--rust-mid);
   border-radius: var(--radius-sm);
   transition:
     color var(--dur),
     background var(--dur);
+}
+
+.ds-toggle-pw__text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .ds-toggle-pw:hover {
@@ -585,18 +601,124 @@ body {
   display: none !important;
 }
 
-.login-demo {
-  margin-top: 1.25rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
+.login-staff-hint {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.login-demo code {
-  font-size: 0.78rem;
-  background: var(--color-bg);
-  padding: 0.1rem 0.35rem;
+.login-staff-hint__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.login-staff-hint__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.login-staff-hint__pw {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.login-staff-hint__pw code {
+  font-size: 0.7rem;
+  background: rgba(230, 81, 0, 0.1);
+  color: var(--rust-deep);
+  padding: 0.15rem 0.35rem;
   border-radius: 4px;
+}
+
+.login-staff-hint__note {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.85rem;
+  line-height: 1.45;
+}
+
+.login-staff-hint__note code {
+  font-size: 0.68rem;
+  background: var(--color-bg);
+  padding: 0.08rem 0.3rem;
+  border-radius: 3px;
+}
+
+.login-staff-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .login-staff-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .login-staff-tile {
+    padding: 0.6rem 0.55rem;
+    min-height: 100%;
+  }
+
+  .login-staff-tile__email {
+    font-size: 0.68rem;
+    word-break: break-word;
+  }
+}
+
+.login-staff-tile {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out),
+    transform 0.15s ease;
+}
+
+.login-staff-tile:hover {
+  border-color: rgba(230, 81, 0, 0.45);
+  box-shadow: 0 4px 14px rgba(230, 81, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.login-staff-tile:active {
+  transform: translateY(0);
+}
+
+.login-staff-tile__role {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--rust-deep);
+}
+
+.login-staff-tile__meta {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin: 0.15rem 0 0.35rem;
+  line-height: 1.35;
+}
+
+.login-staff-tile__email {
+  display: block;
+  font-size: 0.72rem;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--rust-mid);
 }
 
 /* ---------- App shell (dashboard) ---------- */

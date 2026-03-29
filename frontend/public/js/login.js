@@ -57,15 +57,27 @@
   }
 
   function bindToggle(btn, input) {
+    const label = btn.querySelector('.ds-toggle-pw__text');
     btn.addEventListener('click', () => {
       const isPw = input.type === 'password';
       input.type = isPw ? 'text' : 'password';
       btn.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
-      btn.textContent = isPw ? '🙈' : '👁';
+      if (label) label.textContent = isPw ? 'Hide' : 'Show';
     });
   }
   bindToggle(togglePw, pwIn);
   bindToggle(toggleRegPw, regPw);
+
+  document.querySelectorAll('.js-fill-demo').forEach((el) => {
+    el.addEventListener('click', () => {
+      const email = el.getAttribute('data-email');
+      if (!email) return;
+      emailIn.value = email;
+      pwIn.value = '';
+      pwIn.focus();
+      if (window.UI) UI.toast('info', 'Email filled — enter password Staff@2026!');
+    });
+  });
 
   forgot.addEventListener('click', (e) => {
     e.preventDefault();
