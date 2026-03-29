@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, engine
@@ -25,6 +26,16 @@ from app.routers import (
 settings = get_settings()
 
 
+def _cors_middleware_kwargs():
+    """Browsers reject allow_credentials=True with allow_origins=['*']; handle wildcard safely."""
+    origins = settings.cors_origin_list
+    if not origins:
+        origins = ["http://localhost:8000", "http://127.0.0.1:8000"]
+    if any(o == "*" for o in origins):
+        return {"allow_origins": ["*"], "allow_credentials": False}
+    return {"allow_origins": origins, "allow_credentials": True}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Optional auto-create tables for development (production: use schema.sql + migrations)."""
@@ -35,10 +46,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
+_kw = _cors_middleware_kwargs()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
+    allow_origins=_kw["allow_origins"],
+    allow_credentials=_kw["allow_credentials"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,9 +78,24 @@ if os.path.isdir(frontend_dir):
     app.mount("/app", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 
-@app.get("/api/health")
-def health() -> dict:
+@app.get("/health")
+def health_live() -> dict:
+    """Fast liveness — use this path for Render/load balancer probes (no DB round-trip)."""
     return {"status": "ok", "service": settings.app_name}
+
+
+@app.get("/api/health")
+def health_api() -> dict:
+    """App status including database connectivity (may take up to connect_timeout if DB is down)."""
+    payload: dict = {"status": "ok", "service": settings.app_name}
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        payload["database"] = "ok"
+    except Exception:
+        payload["status"] = "degraded"
+        payload["database"] = "error"
+    return payload
 
 
 @app.get("/")

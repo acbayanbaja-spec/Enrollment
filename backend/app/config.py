@@ -4,6 +4,7 @@ Application configuration via environment variables.
 from functools import lru_cache
 from typing import List
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +18,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24
 
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/enrollment_db"
+    database_url: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/enrollment_db",
+        validation_alias=AliasChoices("DATABASE_URL", "database_url"),
+    )
 
     cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
 
