@@ -96,11 +96,11 @@ Enrollment/
 1. Create a **PostgreSQL** instance on Render; note the **Internal Database URL**.
 2. Create a **Web Service** and choose **one** layout:
 
-   **A — Repo root (recommended with this repo’s `requirements.txt` shim)**  
+   **A — Repo root (recommended)**  
    - **Root directory:** *(leave empty)*  
    - **Build command:** `pip install -r requirements.txt`  
-   - **Start command:** `bash start.sh`  
-   The `start.sh` script `cd`s into `backend/` so `import app` works (`ModuleNotFoundError: No module named 'app'` happens if you run `uvicorn` from the repo root without this).
+   - **Start command:** `uvicorn asgi:app --host 0.0.0.0 --port $PORT`  
+   Use the root **`asgi.py`** shim (not `uvicorn app.main:app`). Running `app.main` from the repo root causes `ModuleNotFoundError: No module named 'app'` because the package lives under `backend/`.
 
    **B — Backend only**  
    - **Root directory:** `backend`  

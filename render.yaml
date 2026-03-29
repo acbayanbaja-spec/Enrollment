@@ -8,8 +8,8 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    # Use start.sh so cwd is backend/ (fixes ModuleNotFoundError: No module named 'app')
-    startCommand: bash start.sh
+    # Must use asgi:app (repo root) — not app.main:app — see asgi.py
+    startCommand: uvicorn asgi:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
