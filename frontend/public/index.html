@@ -9,37 +9,40 @@
   <body class="page-land page-enter">
     <header class="land-header">
       <div style="display: flex; align-items: center; gap: 0.65rem">
-        <div class="app-header__logo" style="width: 36px; height: 36px; font-size: 0.65rem">SE</div>
+        <div class="app-header__logo" style="width: 40px; height: 40px; font-size: 0.72rem">SE</div>
         <strong>SEAIT Enrollment</strong>
       </div>
-      <a href="login.html" class="ds-btn ds-btn--primary" style="width: auto; padding: 0.55rem 1.1rem">Sign in</a>
+      <a href="login.html" class="land-btn land-btn--solid">Sign in</a>
     </header>
     <main class="land-hero">
       <h1>Phase-based enrollment, built for clarity</h1>
       <p>
-        Complete your application, track every phase in real time, and work with Registrar, Accounting,
-        and Student Affairs in one secure, modern portal — the official university experience.
+        Complete your application, track every phase in real time, and work with Registrar, Accounting, and Student
+        Affairs in one secure portal — designed for focus and peace of mind.
       </p>
-      <div style="margin-top: 2rem">
-        <a href="login.html" class="ds-btn ds-btn--primary" style="width: auto; display: inline-flex">Access portal</a>
-        <a href="login.html" class="ds-btn ds-btn--ghost" style="width: auto; display: inline-flex; margin-left: 0.5rem"
-          >Staff login</a
-        >
+      <div class="land-actions">
+        <a href="login.html" class="land-btn land-btn--solid">Access portal</a>
+        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">Create student account</a>
       </div>
-      <div class="ds-card" style="margin-top: 2.5rem; text-align: left">
-        <h3 style="margin-top: 0; color: var(--color-green-deep)">How enrollment works</h3>
-        <ol style="color: var(--color-text-muted); line-height: 1.75; padding-left: 1.2rem; margin: 0">
-          <li><strong style="color: var(--color-text)">Phase 1</strong> — Complete and submit your enrollment form.</li>
+      <div class="land-card">
+        <h3>How enrollment works</h3>
+        <ol>
+          <li><strong>Phase 1</strong> — Complete and submit your enrollment form.</li>
           <li>
-            <strong style="color: var(--color-text)">Phase 2</strong> — New students: Registrar. Returning (2nd–4th year):
-            Accounting payment verification.
+            <strong>Phase 2</strong> — New students: Registrar. Returning (2nd–4th year): Accounting payment verification.
           </li>
-          <li><strong style="color: var(--color-text)">Phase 3</strong> — Student Affairs ID validation.</li>
+          <li><strong>Phase 3</strong> — Student Affairs ID validation.</li>
         </ol>
       </div>
     </main>
-    <footer style="text-align: center; padding: 2rem; color: var(--color-text-muted); font-size: 0.85rem">
-      SEAIT-Inspired Online Enrollment System
-    </footer>
+    <footer>SEAIT-Inspired Online Enrollment System</footer>
+    <script>
+      if (window.location.hash === '#register') {
+        sessionStorage.setItem('seait_open_register', '1');
+      }
+      document.getElementById('ctaRegister').addEventListener('click', function () {
+        sessionStorage.setItem('seait_open_register', '1');
+      });
+    </script>
   </body>
 </html>

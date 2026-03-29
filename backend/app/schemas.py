@@ -35,6 +35,14 @@ class UserCreate(BaseModel):
     role_name: str
 
 
+class StudentSelfRegisterRequest(BaseModel):
+    """Public self-service signup — creates a Student account only."""
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    full_name: str = Field(min_length=2, max_length=255)
+
+
 class PersonalBlock(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=128)
     first_name: str = Field(..., min_length=1, max_length=128)
