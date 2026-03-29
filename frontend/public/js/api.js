@@ -31,25 +31,32 @@
     const t = token();
     if (t) headers.Authorization = 'Bearer ' + t;
     const res = await fetch(cfg.API_BASE + path, { ...options, headers });
-    if (res.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      if (!path.includes('/auth/login')) window.location.href = 'login.html';
-      throw new Error('Unauthorized');
-    }
     const text = await res.text();
-    let data;
+    let data = null;
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = text;
+      data = null;
     }
+
     if (!res.ok) {
-      const msg = formatErrorDetail(data && data.detail) || res.statusText || 'Request failed';
-      const err = new Error(msg);
+      const detailMsg = formatErrorDetail(data && data.detail);
+      const fallback =
+        detailMsg ||
+        (text && text.length && text.length < 400 && !data ? text.trim().slice(0, 200) : '') ||
+        (res.statusText ? res.statusText + ' (' + res.status + ')' : 'HTTP ' + res.status);
+
+      if (res.status === 401 && !path.includes('/auth/login')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+      }
+
+      const err = new Error(fallback || 'Request failed');
       err.status = res.status;
       throw err;
     }
+
     return data;
   }
 
