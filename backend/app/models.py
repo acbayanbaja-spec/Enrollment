@@ -17,7 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship as sa_relationship
 
 from app.database import Base
 
@@ -30,7 +30,7 @@ class Role(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    users: Mapped[list["User"]] = relationship(back_populates="role")
+    users: Mapped[list["User"]] = sa_relationship(back_populates="role")
 
 
 class User(Base):
@@ -45,8 +45,8 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    role: Mapped["Role"] = relationship(back_populates="users")
-    student: Mapped[Optional["Student"]] = relationship(back_populates="user", uselist=False)
+    role: Mapped["Role"] = sa_relationship(back_populates="users")
+    student: Mapped[Optional["Student"]] = sa_relationship(back_populates="user", uselist=False)
 
 
 class Student(Base):
@@ -57,8 +57,8 @@ class Student(Base):
     student_number: Mapped[Optional[str]] = mapped_column(String(32), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    user: Mapped["User"] = relationship(back_populates="student")
-    enrollments: Mapped[list["EnrollmentForm"]] = relationship(back_populates="student")
+    user: Mapped["User"] = sa_relationship(back_populates="student")
+    enrollments: Mapped[list["EnrollmentForm"]] = sa_relationship(back_populates="student")
 
 
 class Course(Base):
@@ -102,21 +102,21 @@ class EnrollmentForm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    student: Mapped["Student"] = relationship(back_populates="enrollments")
-    course: Mapped["Course"] = relationship()
-    personal: Mapped[Optional["EnrollmentPersonal"]] = relationship(
+    student: Mapped["Student"] = sa_relationship(back_populates="enrollments")
+    course: Mapped["Course"] = sa_relationship()
+    personal: Mapped[Optional["EnrollmentPersonal"]] = sa_relationship(
         back_populates="enrollment", uselist=False
     )
-    family: Mapped[Optional["EnrollmentFamily"]] = relationship(
+    family: Mapped[Optional["EnrollmentFamily"]] = sa_relationship(
         back_populates="enrollment", uselist=False
     )
-    academic: Mapped[Optional["EnrollmentAcademic"]] = relationship(
+    academic: Mapped[Optional["EnrollmentAcademic"]] = sa_relationship(
         back_populates="enrollment", uselist=False
     )
-    emergency: Mapped[Optional["EnrollmentEmergency"]] = relationship(
+    emergency: Mapped[Optional["EnrollmentEmergency"]] = sa_relationship(
         back_populates="enrollment", uselist=False
     )
-    payments: Mapped[list["Payment"]] = relationship(back_populates="enrollment")
+    payments: Mapped[list["Payment"]] = sa_relationship(back_populates="enrollment")
 
 
 class EnrollmentPersonal(Base):
@@ -140,7 +140,7 @@ class EnrollmentPersonal(Base):
     permanent_address: Mapped[str] = mapped_column(Text, nullable=False)
     current_address: Mapped[str] = mapped_column(Text, nullable=False)
 
-    enrollment: Mapped["EnrollmentForm"] = relationship(back_populates="personal")
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="personal")
 
 
 class EnrollmentFamily(Base):
@@ -160,7 +160,7 @@ class EnrollmentFamily(Base):
     spouse_occupation: Mapped[Optional[str]] = mapped_column(String(128))
     spouse_contact: Mapped[Optional[str]] = mapped_column(String(64))
 
-    enrollment: Mapped["EnrollmentForm"] = relationship(back_populates="family")
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="family")
 
 
 class EnrollmentAcademic(Base):
@@ -178,7 +178,7 @@ class EnrollmentAcademic(Base):
     shs_strand: Mapped[Optional[str]] = mapped_column(String(128))
     shs_year: Mapped[Optional[str]] = mapped_column(String(32))
 
-    enrollment: Mapped["EnrollmentForm"] = relationship(back_populates="academic")
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="academic")
 
 
 class EnrollmentEmergency(Base):
@@ -193,7 +193,7 @@ class EnrollmentEmergency(Base):
     relationship: Mapped[str] = mapped_column(String(64), nullable=False)
     address: Mapped[str] = mapped_column(Text, nullable=False)
 
-    enrollment: Mapped["EnrollmentForm"] = relationship(back_populates="emergency")
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="emergency")
 
 
 class Approval(Base):
@@ -225,7 +225,7 @@ class Payment(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
-    enrollment: Mapped["EnrollmentForm"] = relationship(back_populates="payments")
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="payments")
 
 
 class Notification(Base):

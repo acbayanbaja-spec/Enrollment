@@ -1,6 +1,7 @@
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
-sqlalchemy==2.0.36
+# 2.0.36 + Python 3.14 can raise TypeError in Mapped[] typing; use 3.12 on Render or newer SQLAlchemy
+sqlalchemy==2.0.45
 psycopg[binary]==3.2.12
 python-dotenv==1.0.1
 passlib[bcrypt]==1.7.4
