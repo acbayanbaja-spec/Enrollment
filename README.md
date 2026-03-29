@@ -94,10 +94,19 @@ Enrollment/
 ## Deployment on Render
 
 1. Create a **PostgreSQL** instance on Render; note the **Internal Database URL**.
-2. Create a **Web Service** with:
-   - **Root directory:** `backend`
-   - **Build command:** `pip install -r requirements.txt`
+2. Create a **Web Service** and choose **one** layout:
+
+   **A — Repo root (recommended with this repo’s `requirements.txt` shim)**  
+   - **Root directory:** *(leave empty)*  
+   - **Build command:** `pip install -r requirements.txt`  
+   - **Start command:** `bash start.sh`  
+   The `start.sh` script `cd`s into `backend/` so `import app` works (`ModuleNotFoundError: No module named 'app'` happens if you run `uvicorn` from the repo root without this).
+
+   **B — Backend only**  
+   - **Root directory:** `backend`  
+   - **Build command:** `pip install -r requirements.txt`  
    - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
 3. Set environment variables:
    - `DATABASE_URL` — paste the PostgreSQL URL (the app accepts `postgresql://` from Render).
    - `SECRET_KEY` — long random string.
