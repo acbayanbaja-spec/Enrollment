@@ -9,6 +9,7 @@
   }
 
   const role = user.role_name;
+  if (role === 'Student') document.body.classList.add('portal-student');
   const main = document.getElementById('main');
   const nav = document.getElementById('nav');
   const pageTitle = document.getElementById('pageTitle');
@@ -282,149 +283,148 @@
     return 'badge--pending';
   }
 
+  const STEP_CHECK_SVG =
+    '<svg class="es-node__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+
   function renderPhaseDashboard(enrollments) {
     const el = document.getElementById('phaseDashboardMount');
     if (!el) return;
-    if (!enrollments.length) {
-      el.innerHTML =
-        '<div class="phase-row">' +
-        '<div class="phase-card">' +
-        '<span class="phase-card__num">1</span>' +
-        '<h3>Phase 1 — Application</h3>' +
-        '<p>Complete the enrollment form. <strong>New students</strong> provide K–12 academic background; <strong>returning students</strong> skip that section.</p>' +
-        '</div>' +
-        '<div class="phase-card phase-card--locked">' +
-        '<span class="phase-card__num">2</span>' +
-        '<h3>Phase 2 — Verification &amp; payment</h3>' +
-        '<p>New applicants: Registrar. Returning: pay online (GCash, bank) or at Accounting — approval required before you can proceed.</p>' +
-        '<div class="phase-card__chips"><span class="pay-chip pay-chip--cash">GCash</span><span class="pay-chip">Online / bank</span><span class="pay-chip">Accounting office</span></div>' +
-        '</div></div>' +
-        '<div class="phase-row" style="margin-top:1rem">' +
-        '<div class="phase-card phase-card--locked">' +
-        '<span class="phase-card__num">3</span>' +
-        '<h3>Phase 3 — Student Affairs</h3>' +
-        '<p>ID validation and final clearance.</p>' +
-        '</div></div>' +
-        '<p style="margin:1rem 0 0;font-size:0.88rem;color:var(--color-text-muted)">Open <strong>Enrollment</strong> in the sidebar to begin your application.</p>';
-      return;
-    }
-    const e = enrollments[0];
-    const isNew = e.category === 'New';
-    const p2Title = isNew ? 'Phase 2 — Registrar review' : 'Phase 2 — Payment &amp; Accounting';
-    const p2Desc = isNew
-      ? 'Registrar reviews your application. When this phase is approved, continue to Student Affairs (Phase 3).'
-      : 'Pay via GCash, bank transfer, or in person at Accounting. Upload your receipt. You cannot complete enrollment until Accounting approves your payment.';
-    const p2Note = isNew
-      ? ''
-      : '<div class="phase-card__chips" style="margin-top:0.75rem"><span class="pay-chip pay-chip--cash">GCash</span><span class="pay-chip">Bank / online</span><span class="pay-chip">Walk-in Accounting</span></div>';
-    const p2Locked = e.phase1_status !== 'Approved';
-    const p3Locked = e.phase2_status !== 'Approved';
-    el.innerHTML =
-      '<div class="phase-row">' +
-      '<div class="phase-card">' +
-      '<span class="phase-card__num">1</span>' +
-      '<h3>Phase 1 — Application</h3>' +
-      '<p>Form submitted and recorded. Status: <span class="badge ' +
-      badgeClass(e.phase1_status) +
-      '">' +
-      UI.escapeHtml(e.phase1_status) +
-      '</span></p></div>' +
-      '<div class="phase-card' +
-      (p2Locked ? ' phase-card--locked' : '') +
-      '">' +
-      '<span class="phase-card__num">2</span>' +
-      '<h3>' +
-      p2Title +
-      '</h3>' +
-      '<p>' +
-      p2Desc +
-      '</p>' +
-      p2Note +
-      '<p style="margin:0.75rem 0 0;font-size:0.82rem">Status: <span class="badge ' +
-      badgeClass(e.phase2_status) +
-      '">' +
-      UI.escapeHtml(e.phase2_status) +
-      '</span> · Office: <strong>' +
-      UI.escapeHtml(e.phase2_assigned_role) +
-      '</strong></p></div></div>' +
-      '<div class="phase-row" style="margin-top:1rem">' +
-      '<div class="phase-card' +
-      (p3Locked ? ' phase-card--locked' : '') +
-      '">' +
-      '<span class="phase-card__num">3</span>' +
-      '<h3>Phase 3 — Student Affairs</h3>' +
-      '<p>ID validation and final clearance.</p>' +
-      '<p style="margin:0.75rem 0 0;font-size:0.82rem">Status: <span class="badge ' +
-      badgeClass(e.phase3_status) +
-      '">' +
-      UI.escapeHtml(e.phase3_status) +
-      '</span></p></div></div>';
-  }
 
-  function renderTracker(enrollments) {
-    const el = document.getElementById('trackerMount');
-    if (!el) return;
+    const labels = [
+      'Registrar form',
+      'Evaluation',
+      'Accounting',
+      'Student Affairs',
+      'Enrolled',
+    ];
+    const subs = ['', '', '', 'Optional', ''];
+
+    let stepsDone = [false, false, false, false, false];
+    let metaLine = '';
+    let ctaHtml = '';
+    let summaryStrip = '';
+
     if (!enrollments.length) {
-      el.innerHTML =
-        '<div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line" style="width:70%"></div><p style="color:var(--color-text-muted);margin-top:0.75rem">No enrollments yet. Start the enrollment wizard.</p>';
-      return;
+      stepsDone = [false, false, false, false, false];
+      metaLine = 'Start with the pre-enrollment form to begin your journey.';
+      ctaHtml =
+        '<button type="button" class="ds-btn ds-btn--primary es-cta" id="dashGoForm">Start enrollment form</button>';
+    } else {
+      const e = enrollments[0];
+      const isNew = e.category === 'New';
+      const p1 = e.phase1_status === 'Approved';
+      const p2 = e.phase2_status === 'Approved';
+      const p3 = e.phase3_status === 'Approved';
+      stepsDone = [p1, isNew ? p2 : true, p2, p3, p1 && p2 && p3];
+      summaryStrip =
+        '<div class="enrollment-summary-strip">' +
+        '<span class="enrollment-summary-strip__badge">#' +
+        e.id +
+        '</span>' +
+        '<span>' +
+        UI.escapeHtml(e.course_code || '—') +
+        '</span>' +
+        '<span class="enrollment-summary-strip__muted">' +
+        UI.escapeHtml(e.academic_year) +
+        ' · ' +
+        UI.escapeHtml(e.semester) +
+        '</span>' +
+        '<span class="badge ' +
+        badgeClass(e.phase2_status) +
+        '">Phase 2 · ' +
+        UI.escapeHtml(e.phase2_assigned_role) +
+        '</span>' +
+        '</div>';
+
+      if (!p1) {
+        metaLine = 'Submit your registrar form to unlock the next steps.';
+        ctaHtml =
+          '<button type="button" class="ds-btn ds-btn--primary es-cta" id="dashGoForm">Continue enrollment form</button>';
+      } else if (!p2 && !isNew) {
+        metaLine = 'Proceed to the payment section to upload your receipt or complete payment at Accounting.';
+        ctaHtml =
+          '<button type="button" class="ds-btn ds-btn--primary es-cta" id="dashGoPayment">Go to payment</button>';
+      } else if (!p2 && isNew) {
+        metaLine = 'Awaiting Registrar evaluation for your application.';
+        ctaHtml = '';
+      } else if (!p3) {
+        metaLine = 'Student Affairs will validate your ID — stay tuned for clearance.';
+        ctaHtml = '';
+      } else {
+        metaLine = 'You are fully cleared for this enrollment period.';
+        ctaHtml = '';
+      }
+
+      if (e.phase1_status === 'Rejected' || e.phase2_status === 'Rejected' || e.phase3_status === 'Rejected') {
+        metaLine = 'One or more phases need attention. Check notifications or contact the office.';
+      }
     }
-    el.innerHTML = enrollments
-      .map((e) => {
-        const phases = [
-          { n: 1, label: 'Form submitted', s: e.phase1_status },
-          { n: 2, label: 'Verification (Registrar / Accounting)', s: e.phase2_status },
-          { n: 3, label: 'Student Affairs (ID)', s: e.phase3_status },
-        ];
-        const doneIdx = phases.findIndex((p) => p.s !== 'Approved');
-        const current = doneIdx === -1 ? 2 : Math.max(0, doneIdx);
-        return (
-          '<div class="ds-card" style="margin-bottom:1rem;padding:1rem">' +
-          '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;align-items:center">' +
-          '<strong>#' +
-          e.id +
-          '</strong>' +
-          '<span style="color:var(--color-text-muted);font-size:0.88rem">' +
-          UI.escapeHtml(e.course_code || '') +
-          ' · ' +
-          UI.escapeHtml(e.academic_year) +
-          ' ' +
-          UI.escapeHtml(e.semester) +
-          '</span></div>' +
-          '<div class="timeline" style="margin-top:1rem">' +
-          phases
-            .map((p, i) => {
-              let cls = '';
-              if (p.s === 'Approved') cls = 'timeline-item--done';
-              else if (i === current && p.s === 'Pending') cls = 'timeline-item--current';
-              return (
-                '<div class="timeline-item ' +
-                cls +
-                '"><div class="timeline-dot"></div><div class="timeline-body"><h4>Phase ' +
-                p.n +
-                ': ' +
-                UI.escapeHtml(p.label) +
-                '</h4><span class="badge ' +
-                badgeClass(p.s) +
-                '">' +
-                UI.escapeHtml(p.s) +
-                '</span></div></div>'
-              );
-            })
-            .join('') +
+
+    function nodeClass(i) {
+      const done = stepsDone[i];
+      if (done) return 'es-node es-node--done';
+      const prevOk = i === 0 || stepsDone[i - 1];
+      if (prevOk && !done) return 'es-node es-node--current';
+      return 'es-node es-node--upcoming';
+    }
+
+    function nodeInner(i) {
+      const done = stepsDone[i];
+      if (done) return STEP_CHECK_SVG;
+      return '<span class="es-node__num">' + (i + 1) + '</span>';
+    }
+
+    const railPct =
+      (stepsDone.slice(0, 4).filter(Boolean).length / 4) * 100;
+
+    const stepsHtml = labels
+      .map(
+        (title, i) =>
+          '<li class="' +
+          nodeClass(i) +
+          '" style="--es-i:' +
+          i +
+          '">' +
+          '<div class="es-node__circle">' +
+          nodeInner(i) +
           '</div>' +
-          '<p style="font-size:0.82rem;color:var(--color-text-muted);margin:0.5rem 0 0">Next office: <strong>' +
-          UI.escapeHtml(e.phase2_assigned_role) +
-          '</strong> (when applicable)</p></div>'
-        );
-      })
+          '<span class="es-node__title">' +
+          UI.escapeHtml(title) +
+          '</span>' +
+          (subs[i]
+            ? '<span class="es-node__sub">' + UI.escapeHtml(subs[i]) + '</span>'
+            : '') +
+          '</li>'
+      )
       .join('');
+
+    el.innerHTML =
+      summaryStrip +
+      '<div class="es-stepper" role="list" aria-label="Enrollment steps">' +
+      '<div class="es-stepper__rail" aria-hidden="true"><div class="es-stepper__rail-fill" style="width:' +
+      railPct +
+      '%"></div></div>' +
+      '<ol class="es-stepper__nodes">' +
+      stepsHtml +
+      '</ol></div>' +
+      '<p class="es-stepper__hint">' +
+      UI.escapeHtml(metaLine) +
+      '</p>' +
+      (ctaHtml ? '<div class="es-stepper__cta">' + ctaHtml + '</div>' : '');
+
+    document.getElementById('dashGoForm')?.addEventListener('click', () => {
+      const btn = nav.querySelector('[data-view="form"]');
+      if (btn) btn.click();
+    });
+    document.getElementById('dashGoPayment')?.addEventListener('click', () => {
+      const btn = nav.querySelector('[data-view="payments"]');
+      if (btn) btn.click();
+    });
   }
 
   async function refreshTracker() {
     try {
       const list = await api.get('/api/enrollment/mine');
-      renderTracker(list);
       renderPhaseDashboard(list);
     } catch (e) {
       console.error(e);
@@ -895,33 +895,6 @@
     render('');
   }
 
-  function wireIrregular() {
-    const run = document.getElementById('irrRun');
-    const seed = document.getElementById('irrSeed');
-    if (!run) return;
-    run.addEventListener('click', async () => {
-      const cid = document.getElementById('irrCourse').value || '1';
-      const out = document.getElementById('irrOut');
-      try {
-        const r = await api.get('/api/ai/irregular-check?course_id=' + cid + '&seed_demo=false');
-        out.textContent = JSON.stringify(r, null, 2);
-      } catch (e) {
-        out.textContent = e.message;
-      }
-    });
-    seed.addEventListener('click', async () => {
-      const cid = document.getElementById('irrCourse').value || '1';
-      const out = document.getElementById('irrOut');
-      try {
-        const r = await api.get('/api/ai/irregular-check?course_id=' + cid + '&seed_demo=true');
-        out.textContent = JSON.stringify(r, null, 2);
-        UI.toast('success', 'Demo progress seeded.');
-      } catch (e) {
-        out.textContent = e.message;
-      }
-    });
-  }
-
   async function prefillDraft() {
     try {
       const list = await api.get('/api/enrollment/mine');
@@ -1078,7 +1051,6 @@
         await refreshTracker();
         await loadHistory();
         await loadAssistantSteps();
-        wireIrregular();
       } else if (role === 'Admin') {
         setPageHead('Dashboard', 'System overview and analytics');
         main.appendChild(cloneTpl('tpl-admin-home'));

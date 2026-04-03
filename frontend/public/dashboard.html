@@ -10,30 +10,49 @@
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
     <div id="modal-root"></div>
 
-    <div id="aiWelcomeBackdrop" class="ai-welcome-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiWelcomeTitle" aria-hidden="true">
-      <div class="ai-welcome">
-        <div class="ai-welcome__head">
-          <div class="ai-welcome__avatar" aria-hidden="true">AI</div>
-          <div>
-            <h2 id="aiWelcomeTitle">How can I help you?</h2>
-            <p>Enrollment assistant</p>
-          </div>
-        </div>
-        <div class="ai-welcome__body">
-          <p>
-            Ask about phases, payments, Registrar or Accounting steps, or what to do next. You can open the chat anytime
-            from the button at the bottom-right.
-          </p>
-          <div class="ai-welcome__actions">
-            <button type="button" class="ds-btn ds-btn--primary" id="aiWelcomeOpenChat">Open chat assistant</button>
-            <button type="button" class="ds-btn ds-btn--ghost" id="aiWelcomeDismiss">Not now</button>
-          </div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <header class="app-header">
+      <div class="app-header__left">
+        <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <a href="dashboard.html" class="app-header__brand-link" aria-label="SEAIT Enrollment home">
+          <img src="img/seait-logo.svg" alt="SEAIT" class="app-header__logo-img" width="152" height="38" />
+        </a>
+      </div>
+      <div class="app-header__right">
+        <div class="app-header__user">
+          <div id="headerUserName">—</div>
+          <div class="app-header__role" id="headerUserRole">—</div>
         </div>
       </div>
+    </header>
+
+    <div class="app-body">
+      <aside class="app-sidebar" id="sidebar">
+        <div class="app-sidebar__brand">
+          <img src="img/seait-mark.svg" alt="" class="app-sidebar__brand-img" width="40" height="40" />
+          <div>
+            <div class="app-sidebar__brand-title">SEAIT</div>
+            <div class="app-sidebar__brand-sub">Enrollment</div>
+          </div>
+        </div>
+        <nav class="app-sidebar__nav" id="nav"></nav>
+        <div class="app-sidebar__logout">
+          <button type="button" class="ds-btn ds-btn--ghost" id="logoutBtn" style="width: 100%">Log out</button>
+        </div>
+      </aside>
+      <main class="app-main">
+        <div class="page-head">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle"></p>
+        </div>
+        <div id="main"></div>
+      </main>
     </div>
 
     <button type="button" class="fab-chat" id="fabChat" aria-label="Open AI assistant" title="AI Assistant">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <img src="img/seait-mark.svg" alt="" class="fab-chat__mark" width="30" height="30" />
+      <svg class="fab-chat__bubble" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path
           d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.89-1.96C9.08 20.64 10.5 21 12 21c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.35-3.82-.96l-.27-.15-3.09 1.04 1.04-3.09-.18-.29C5.35 14.68 5 13.39 5 12c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"
         />
@@ -41,10 +60,12 @@
     </button>
     <div class="chat-drawer" id="chatDrawer" aria-hidden="true">
       <div class="chat-drawer__head">
-        <span>Enrollment Assistant</span>
-        <button type="button" class="modal-close" id="chatClose" style="color: #fff" aria-label="Close chat">
-          &times;
-        </button>
+        <img src="img/seait-mark.svg" alt="" class="chat-drawer__logo" width="32" height="32" />
+        <div class="chat-drawer__head-text">
+          <span class="chat-drawer__title">Enrollment Assistant</span>
+          <span class="chat-drawer__sub">SEAIT · How can I help you?</span>
+        </div>
+        <button type="button" class="modal-close" id="chatClose" aria-label="Close chat">&times;</button>
       </div>
       <div class="chat-quick" id="chatQuick">
         <button type="button" class="chat-quick__btn" id="chatQuickFlow" data-prompt="Explain the enrollment flow step by step: Phase 1 application, Phase 2 payment or Registrar, Phase 3 Student Affairs, and what I need to do as a student.">
@@ -66,85 +87,47 @@
       </div>
     </div>
 
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <header class="app-header">
-      <div class="app-header__left">
-        <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
-        <div class="app-header__logo app-header__logo--pulse">SE</div>
-        <div class="app-header__titles">
-          <h1>SEAIT Enrollment</h1>
-          <span>Official student portal</span>
-        </div>
-      </div>
-      <div class="app-header__right">
-        <div class="app-header__user">
-          <div id="headerUserName">—</div>
-          <div class="app-header__role" id="headerUserRole">—</div>
-        </div>
-      </div>
-    </header>
-
-    <div class="app-body">
-      <aside class="app-sidebar" id="sidebar">
-        <div class="app-sidebar__brand">
-          <span class="app-sidebar__brand-mark">SE</span>
+    <div id="aiWelcomeBackdrop" class="ai-welcome-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiWelcomeTitle" aria-hidden="true">
+      <div class="ai-welcome">
+        <div class="ai-welcome__head">
+          <img src="img/seait-mark.svg" alt="" class="ai-welcome__logo" width="40" height="40" />
           <div>
-            <div class="app-sidebar__brand-title">Navigation</div>
-            <div class="app-sidebar__brand-sub">Modules &amp; tools</div>
+            <h2 id="aiWelcomeTitle">How can I help you?</h2>
+            <p>SEAIT enrollment assistant</p>
           </div>
         </div>
-        <nav class="app-sidebar__nav" id="nav"></nav>
-        <div class="app-sidebar__logout">
-          <button type="button" class="ds-btn ds-btn--ghost" id="logoutBtn" style="width: 100%">Log out</button>
+        <div class="ai-welcome__body">
+          <p>
+            Ask about phases, payments, Registrar or Accounting steps, or what to do next. Open the chat anytime from
+            the button at the bottom-right.
+          </p>
+          <div class="ai-welcome__actions">
+            <button type="button" class="ds-btn ds-btn--primary" id="aiWelcomeOpenChat">Open chat assistant</button>
+            <button type="button" class="ds-btn ds-btn--ghost" id="aiWelcomeDismiss">Not now</button>
+          </div>
         </div>
-      </aside>
-      <main class="app-main">
-        <div class="page-head">
-          <h1 id="pageTitle">Dashboard</h1>
-          <p id="pageSubtitle"></p>
-        </div>
-        <div id="main"></div>
-      </main>
+      </div>
     </div>
 
     <!-- Student home -->
     <template id="tpl-student-home">
-      <div class="student-dash-grid">
-        <div class="ds-card ds-card--phase">
-          <h2>Your enrollment dashboard</h2>
-          <p class="smart-hint" style="margin-top: 0">
-            Phases run in order. Complete Phase 1 before Phase 2 unlocks. Returning students: Phase 2 payment must be
-            approved by Accounting before you are cleared to continue.
-          </p>
-          <div class="phase-dashboard" id="phaseDashboardMount"></div>
+      <div class="student-dash-grid student-dash-grid--modern">
+        <div class="ds-card ds-card--hero ds-card--enrollment-progress">
+          <div class="enrollment-progress-head">
+            <h2>Enrollment progress</h2>
+            <p class="enrollment-progress-sub">
+              Track each milestone. Orange steps are complete or active; grey steps are still ahead.
+            </p>
+          </div>
+          <div class="phase-dashboard phase-dashboard--stepper" id="phaseDashboardMount"></div>
         </div>
-        <div class="ds-card">
-          <h2>At a glance</h2>
-          <div id="trackerMount"></div>
-        </div>
-        <div class="ds-card">
+        <div class="ds-card ds-card--glass">
           <h2>Enrollment history</h2>
           <div id="historyMount"></div>
         </div>
-        <div class="ds-card">
+        <div class="ds-card ds-card--glass">
           <h2>Recommended next steps</h2>
           <div id="stepsMount"></div>
-        </div>
-        <div class="ds-card ds-card--span">
-          <h2>Curriculum check (irregular)</h2>
-          <p class="smart-hint">Simulated curriculum comparison (demo data for BSIT).</p>
-          <div class="grid-2">
-            <div class="ds-field-inline">
-              <label>Course ID</label>
-              <input type="number" id="irrCourse" placeholder="1" min="1" />
-            </div>
-            <div style="display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap">
-              <button type="button" class="ds-btn ds-btn--ghost" id="irrSeed">Seed demo</button>
-              <button type="button" class="ds-btn ds-btn--primary" id="irrRun" style="width: auto">Analyze</button>
-            </div>
-          </div>
-          <pre id="irrOut" style="color: var(--color-text-muted); white-space: pre-wrap; font-size: 0.85rem; margin: 1rem 0 0"></pre>
         </div>
       </div>
     </template>
