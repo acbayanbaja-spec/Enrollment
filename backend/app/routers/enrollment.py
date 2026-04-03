@@ -77,7 +77,7 @@ def _serialize_enrollment(e: EnrollmentForm) -> dict[str, Any]:
             "spouse_occupation": f.spouse_occupation,
             "spouse_contact": f.spouse_contact,
         }
-    if e.academic:
+    if e.academic and e.category == "New":
         a = e.academic
         out["academic"] = {
             "elem_school": a.elem_school,
@@ -145,8 +145,15 @@ def _apply_family(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -
 
 
 def _apply_academic(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -> None:
-    a = body.academic
+    """New students store K–12 background; returning students have no academic row."""
     row = db.query(EnrollmentAcademic).filter(EnrollmentAcademic.enrollment_form_id == e.id).first()
+    if body.category != "New":
+        if row:
+            db.delete(row)
+        return
+    if not body.academic:
+        return  # draft: allow saving before academic section is filled
+    a = body.academic
     if not row:
         row = EnrollmentAcademic(enrollment_form_id=e.id)
         db.add(row)
@@ -221,6 +228,11 @@ def save_enrollment(
     _apply_emergency(e, body, db)
 
     if body.submit:
+        if body.category == "New" and not body.academic:
+            raise HTTPException(
+                status_code=400,
+                detail="Academic background is required before submitting as a new student.",
+            )
         ok, msg = is_phase_open(db, 1)
         if not ok:
             raise HTTPException(status_code=400, detail=msg)

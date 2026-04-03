@@ -98,7 +98,8 @@ class EnrollmentDraftCreate(BaseModel):
     category: str = Field(..., pattern="^(New|2nd Year|3rd Year|4th Year)$")
     personal: PersonalBlock
     family: FamilyBlock
-    academic: AcademicBlock
+    # Required only for new applicants; omitted for returning students (2nd–4th year)
+    academic: Optional[AcademicBlock] = None
     emergency: EmergencyBlock
 
 

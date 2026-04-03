@@ -10,6 +10,28 @@
     <div id="toast-root" class="toast-root" aria-live="polite"></div>
     <div id="modal-root"></div>
 
+    <div id="aiWelcomeBackdrop" class="ai-welcome-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiWelcomeTitle" aria-hidden="true">
+      <div class="ai-welcome">
+        <div class="ai-welcome__head">
+          <div class="ai-welcome__avatar" aria-hidden="true">AI</div>
+          <div>
+            <h2 id="aiWelcomeTitle">How can I help you?</h2>
+            <p>Enrollment assistant</p>
+          </div>
+        </div>
+        <div class="ai-welcome__body">
+          <p>
+            Ask about phases, payments, Registrar or Accounting steps, or what to do next. You can open the chat anytime
+            from the button at the bottom-right.
+          </p>
+          <div class="ai-welcome__actions">
+            <button type="button" class="ds-btn ds-btn--primary" id="aiWelcomeOpenChat">Open chat assistant</button>
+            <button type="button" class="ds-btn ds-btn--ghost" id="aiWelcomeDismiss">Not now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button type="button" class="fab-chat" id="fabChat" aria-label="Open AI assistant" title="AI Assistant">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path
@@ -22,6 +44,17 @@
         <span>Enrollment Assistant</span>
         <button type="button" class="modal-close" id="chatClose" style="color: #fff" aria-label="Close chat">
           &times;
+        </button>
+      </div>
+      <div class="chat-quick" id="chatQuick">
+        <button type="button" class="chat-quick__btn" id="chatQuickFlow" data-prompt="Explain the enrollment flow step by step: Phase 1 application, Phase 2 payment or Registrar, Phase 3 Student Affairs, and what I need to do as a student.">
+          Enrollment flow
+        </button>
+        <button type="button" class="chat-quick__btn" id="chatQuickPay" data-prompt="How do I pay tuition? What are the options for GCash or online payment versus paying in person at Accounting, and when am I officially enrolled?">
+          Payments &amp; Accounting
+        </button>
+        <button type="button" class="chat-quick__btn" id="chatQuickNext" data-prompt="What should I do next in my enrollment? How do I know if Registrar or Accounting approved my application?">
+          What should I do next?
         </button>
       </div>
       <div class="chat-drawer__log" id="chatDrawerLog"></div>
@@ -38,10 +71,10 @@
     <header class="app-header">
       <div class="app-header__left">
         <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
-        <div class="app-header__logo">SE</div>
+        <div class="app-header__logo app-header__logo--pulse">SE</div>
         <div class="app-header__titles">
           <h1>SEAIT Enrollment</h1>
-          <span>Official student &amp; staff portal</span>
+          <span>Official student portal</span>
         </div>
       </div>
       <div class="app-header__right">
@@ -77,35 +110,42 @@
 
     <!-- Student home -->
     <template id="tpl-student-home">
-      <div class="ds-card">
-        <h2>Enrollment progress</h2>
-        <p class="smart-hint" style="margin-top: 0">
-          New applicants and returning students move through the same phases in order — you cannot skip ahead.
-        </p>
-        <div id="trackerMount"></div>
-      </div>
-      <div class="ds-card">
-        <h2>Enrollment history</h2>
-        <div id="historyMount"></div>
-      </div>
-      <div class="ds-card">
-        <h2>Smart assistant — next steps</h2>
-        <div id="stepsMount"></div>
-      </div>
-      <div class="ds-card">
-        <h2>Irregular student check</h2>
-        <p class="smart-hint">Simulated curriculum comparison (demo data for BSIT).</p>
-        <div class="grid-2">
-          <div class="ds-field-inline">
-            <label>Course ID</label>
-            <input type="number" id="irrCourse" placeholder="1" min="1" />
-          </div>
-          <div style="display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap">
-            <button type="button" class="ds-btn ds-btn--ghost" id="irrSeed">Seed demo</button>
-            <button type="button" class="ds-btn ds-btn--primary" id="irrRun" style="width: auto">Analyze</button>
-          </div>
+      <div class="student-dash-grid">
+        <div class="ds-card ds-card--phase">
+          <h2>Your enrollment dashboard</h2>
+          <p class="smart-hint" style="margin-top: 0">
+            Phases run in order. Complete Phase 1 before Phase 2 unlocks. Returning students: Phase 2 payment must be
+            approved by Accounting before you are cleared to continue.
+          </p>
+          <div class="phase-dashboard" id="phaseDashboardMount"></div>
         </div>
-        <pre id="irrOut" style="color: var(--color-text-muted); white-space: pre-wrap; font-size: 0.85rem; margin: 1rem 0 0"></pre>
+        <div class="ds-card">
+          <h2>At a glance</h2>
+          <div id="trackerMount"></div>
+        </div>
+        <div class="ds-card">
+          <h2>Enrollment history</h2>
+          <div id="historyMount"></div>
+        </div>
+        <div class="ds-card">
+          <h2>Recommended next steps</h2>
+          <div id="stepsMount"></div>
+        </div>
+        <div class="ds-card ds-card--span">
+          <h2>Curriculum check (irregular)</h2>
+          <p class="smart-hint">Simulated curriculum comparison (demo data for BSIT).</p>
+          <div class="grid-2">
+            <div class="ds-field-inline">
+              <label>Course ID</label>
+              <input type="number" id="irrCourse" placeholder="1" min="1" />
+            </div>
+            <div style="display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap">
+              <button type="button" class="ds-btn ds-btn--ghost" id="irrSeed">Seed demo</button>
+              <button type="button" class="ds-btn ds-btn--primary" id="irrRun" style="width: auto">Analyze</button>
+            </div>
+          </div>
+          <pre id="irrOut" style="color: var(--color-text-muted); white-space: pre-wrap; font-size: 0.85rem; margin: 1rem 0 0"></pre>
+        </div>
       </div>
     </template>
 
@@ -293,12 +333,15 @@
             </div>
           </div>
 
-          <div class="wizard-panel" data-wizard-step="3">
-            <div class="section-label">Academic background</div>
+          <div class="wizard-panel" data-wizard-step="3" id="wizardPanelAcademic">
+            <div class="section-label">Academic background <span id="academicBadge" class="badge badge--pending" style="margin-left: 0.35rem">New students only</span></div>
+            <p id="academicHint" class="smart-hint" style="margin-top: 0">
+              Required for <strong>new applicants</strong> only. Returning students do not submit K–12 records here.
+            </p>
             <div class="grid-2">
               <div class="ds-field-inline">
                 <label>Elementary school *</label>
-                <input name="elem_school" id="elem_school" required data-step-req="3" />
+                <input name="elem_school" id="elem_school" data-step-req="3" />
               </div>
               <div class="ds-field-inline">
                 <label>Year graduated</label>
@@ -306,7 +349,7 @@
               </div>
               <div class="ds-field-inline">
                 <label>Junior high *</label>
-                <input name="jhs_school" id="jhs_school" required data-step-req="3" />
+                <input name="jhs_school" id="jhs_school" data-step-req="3" />
               </div>
               <div class="ds-field-inline">
                 <label>JHS year</label>
@@ -314,7 +357,7 @@
               </div>
               <div class="ds-field-inline">
                 <label>Senior high *</label>
-                <input name="shs_school" id="shs_school" required data-step-req="3" />
+                <input name="shs_school" id="shs_school" data-step-req="3" />
               </div>
               <div class="ds-field-inline">
                 <label>Strand / track</label>
@@ -369,8 +412,21 @@
 
     <template id="tpl-payments">
       <div class="ds-card">
-        <h2>Payment upload</h2>
-        <p class="smart-hint">For 2nd–4th year students on the Accounting path. Upload a clear receipt (JPG, PNG, PDF).</p>
+        <h2>Phase 2 — Payments</h2>
+        <p class="smart-hint">
+          If you are a <strong>returning student</strong> (2nd year and up), Accounting verifies your payment — you
+          cannot complete enrollment until they approve. Pay online (GCash, bank transfer, etc.) and upload your
+          receipt, or pay in person at the Accounting office and obtain proof to upload.
+        </p>
+        <div class="phase-card__chips" style="margin-bottom: 1rem">
+          <span class="pay-chip pay-chip--cash">GCash / mobile wallet</span>
+          <span class="pay-chip">Bank transfer / online</span>
+          <span class="pay-chip">In person at Accounting</span>
+        </div>
+        <h3 style="margin-top: 0; font-size: 1rem">Upload receipt</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0">
+          Use a clear screenshot or PDF. Accepted: JPG, PNG, PDF, WebP.
+        </p>
         <div id="payMsg"></div>
         <div class="grid-2">
           <div class="ds-field-inline">

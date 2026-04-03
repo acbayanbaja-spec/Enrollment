@@ -7,35 +7,55 @@
     <link rel="stylesheet" href="css/design-system.css" />
   </head>
   <body class="page-land page-enter">
+    <div class="land-bg" aria-hidden="true">
+      <span class="land-bg__mesh"></span>
+      <span class="land-bg__orb land-bg__orb--1"></span>
+      <span class="land-bg__orb land-bg__orb--2"></span>
+      <span class="land-bg__orb land-bg__orb--3"></span>
+    </div>
     <header class="land-header">
-      <div style="display: flex; align-items: center; gap: 0.65rem">
-        <div class="app-header__logo" style="width: 40px; height: 40px; font-size: 0.72rem">SE</div>
-        <strong>SEAIT Enrollment</strong>
+      <div class="land-header__brand">
+        <div class="app-header__logo land-logo-pulse">SE</div>
+        <div>
+          <strong class="land-header__title">SEAIT Enrollment</strong>
+          <span class="land-header__tag">Official student portal</span>
+        </div>
       </div>
       <a href="login.html" class="land-btn land-btn--solid">Sign in</a>
     </header>
     <main class="land-hero">
-      <h1>Phase-based enrollment, built for clarity</h1>
-      <p>
-        Complete your application, track every phase in real time, and work with Registrar, Accounting, and Student
-        Affairs in one secure portal — designed for focus and peace of mind.
+      <p class="land-eyebrow">Secure · phased · transparent</p>
+      <h1>Enrollment built for clarity and trust</h1>
+      <p class="land-lead">
+        Complete your application, move through structured phases, and track Registrar, Accounting, and Student Affairs
+        steps in one place — a calm, professional experience from signup to confirmation.
       </p>
       <div class="land-actions">
-        <a href="login.html" class="land-btn land-btn--solid">Access portal</a>
-        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">Student signup · new or returning</a>
+        <a href="login.html" class="land-btn land-btn--solid land-btn--pulse">Access portal</a>
+        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">Create student account</a>
       </div>
-      <div class="land-card">
-        <h3>How enrollment works</h3>
-        <ol>
-          <li><strong>Phase 1</strong> — Complete and submit your enrollment form.</li>
-          <li>
-            <strong>Phase 2</strong> — New students: Registrar. Returning (2nd–4th year): Accounting payment verification.
-          </li>
-          <li><strong>Phase 3</strong> — Student Affairs ID validation.</li>
-        </ol>
+      <div class="land-features">
+        <article class="land-feature-card land-feature-card--delay1">
+          <span class="land-feature-card__icon" aria-hidden="true">1</span>
+          <h3>Phase 1 — Application</h3>
+          <p>Guided form with validation. New students include academic background; returning students skip that section.</p>
+        </article>
+        <article class="land-feature-card land-feature-card--delay2">
+          <span class="land-feature-card__icon" aria-hidden="true">2</span>
+          <h3>Phase 2 — Verification &amp; payment</h3>
+          <p>
+            New applicants: Registrar review. Returning students: pay online (e.g. GCash) or in person at Accounting —
+            enrollment stays on hold until payment is approved.
+          </p>
+        </article>
+        <article class="land-feature-card land-feature-card--delay3">
+          <span class="land-feature-card__icon" aria-hidden="true">3</span>
+          <h3>Phase 3 — Student Affairs</h3>
+          <p>Final ID validation and clearance so you are fully enrolled for the term.</p>
+        </article>
       </div>
     </main>
-    <footer>SEAIT-Inspired Online Enrollment System</footer>
+    <footer class="land-footer">SEAIT-Inspired Online Enrollment System</footer>
     <script>
       if (window.location.hash === '#register') {
         sessionStorage.setItem('seait_open_register', '1');

@@ -64,40 +64,62 @@
   }
 
   const WIZARD_HINTS = {
-    1: 'Tip: Use your legal name as it appears on your birth certificate.',
+    1: 'Tip: Use your legal name as it appears on your school records.',
     2: 'Tip: Provide at least one parent or guardian contact for verification.',
     3: 'Tip: Include your SHS strand if you completed K–12 in the Philippines.',
     4: 'Tip: Emergency contact should be reachable during school hours.',
     5: 'Review all sections. After submit, Phase 2 routing depends on your category.',
   };
 
+  function getWizardStepSequence() {
+    const cat = document.getElementById('category') && document.getElementById('category').value;
+    return cat === 'New' ? [1, 2, 3, 4, 5] : [1, 2, 4, 5];
+  }
+
+  function syncAcademicPanelVisibility() {
+    const cat = document.getElementById('category') && document.getElementById('category').value;
+    const panel = document.getElementById('wizardPanelAcademic');
+    if (!panel) return;
+    const isNew = cat === 'New';
+    ['elem_school', 'jhs_school', 'shs_school'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.required = !!isNew;
+    });
+  }
+
   function initWizard() {
-    const total = 5;
-    let step = 1;
+    let stepIndex = 0;
     const fill = document.getElementById('wizardFill');
     const label = document.getElementById('wizardStepLabel');
     const hint = document.getElementById('wizardSmartHint');
     const prev = document.getElementById('wizPrev');
     const next = document.getElementById('wizNext');
     const submitBtn = document.getElementById('submitForm');
+    const catEl = document.getElementById('category');
     const panels = () => document.querySelectorAll('.wizard-panel');
 
-    function showStep(n) {
+    function showStep() {
+      const seq = getWizardStepSequence();
+      const total = seq.length;
+      const panelNum = seq[stepIndex];
       panels().forEach((p) => {
-        p.classList.toggle('is-active', parseInt(p.getAttribute('data-wizard-step'), 10) === n);
+        p.classList.toggle('is-active', parseInt(p.getAttribute('data-wizard-step'), 10) === panelNum);
       });
-      const pct = (n / total) * 100;
+      const pct = ((stepIndex + 1) / total) * 100;
       fill.style.width = pct + '%';
-      label.textContent = 'Step ' + n + ' of ' + total;
-      hint.innerHTML = '<span class="smart-hint" style="display:block;margin:0">' + WIZARD_HINTS[n] + '</span>';
-      prev.style.display = n > 1 ? 'inline-flex' : 'none';
-      next.style.display = n < total ? 'inline-flex' : 'none';
-      submitBtn.style.display = n === total ? 'inline-flex' : 'none';
-      if (n === 5) buildReview();
+      label.textContent = 'Step ' + (stepIndex + 1) + ' of ' + total;
+      hint.innerHTML =
+        '<span class="smart-hint" style="display:block;margin:0">' + WIZARD_HINTS[panelNum] + '</span>';
+      prev.style.display = stepIndex > 0 ? 'inline-flex' : 'none';
+      next.style.display = stepIndex < total - 1 ? 'inline-flex' : 'none';
+      submitBtn.style.display = stepIndex === total - 1 ? 'inline-flex' : 'none';
+      if (panelNum === 5) buildReview();
     }
 
-    function validateStep(n) {
-      const sel = '[data-step-req="' + n + '"]';
+    function validateCurrentStep() {
+      const seq = getWizardStepSequence();
+      const panelNum = seq[stepIndex];
+      const sel = '[data-step-req="' + panelNum + '"]';
       const fields = document.querySelectorAll(sel);
       for (let i = 0; i < fields.length; i++) {
         const el = fields[i];
@@ -106,7 +128,7 @@
           return false;
         }
       }
-      if (n === 1) {
+      if (panelNum === 1) {
         const course = document.getElementById('course_id');
         if (!course.value) {
           UI.toast('error', 'Please select a course.');
@@ -120,6 +142,18 @@
       const el = document.getElementById('reviewMount');
       const c = document.getElementById('course_id');
       const ctext = c.options[c.selectedIndex] ? c.options[c.selectedIndex].text : '';
+      const isNew = document.getElementById('category').value === 'New';
+      let academicBlock = '';
+      if (isNew) {
+        academicBlock =
+          '<p><strong>Academic:</strong> ' +
+          UI.escapeHtml(document.getElementById('shs_school').value) +
+          ' (SHS) · ' +
+          UI.escapeHtml(document.getElementById('jhs_school').value) +
+          ' (JHS)</p>';
+      } else {
+        academicBlock = '<p><strong>Academic background:</strong> Not required for returning students.</p>';
+      }
       el.innerHTML =
         '<p><strong>Program:</strong> ' +
         UI.escapeHtml(document.getElementById('category').value) +
@@ -133,7 +167,9 @@
         UI.escapeHtml(document.getElementById('pfirst').value + ' ' + document.getElementById('plast').value) +
         '</p><p><strong>Contact:</strong> ' +
         UI.escapeHtml(document.getElementById('pcontact').value) +
-        '</p><p><strong>Emergency:</strong> ' +
+        '</p>' +
+        academicBlock +
+        '<p><strong>Emergency:</strong> ' +
         UI.escapeHtml(document.getElementById('e_name').value) +
         ' (' +
         UI.escapeHtml(document.getElementById('e_rel').value) +
@@ -141,30 +177,53 @@
     }
 
     prev.addEventListener('click', () => {
-      if (step > 1) {
-        step--;
-        showStep(step);
+      if (stepIndex > 0) {
+        stepIndex--;
+        showStep();
       }
     });
     next.addEventListener('click', () => {
-      if (!validateStep(step)) return;
-      if (step < total) {
-        step++;
-        showStep(step);
+      if (!validateCurrentStep()) return;
+      const seq = getWizardStepSequence();
+      if (stepIndex < seq.length - 1) {
+        stepIndex++;
+        showStep();
       }
     });
-    showStep(1);
+    if (catEl) {
+      catEl.addEventListener('change', () => {
+        syncAcademicPanelVisibility();
+        const seq = getWizardStepSequence();
+        if (stepIndex >= seq.length) stepIndex = Math.max(0, seq.length - 1);
+        showStep();
+      });
+    }
+    syncAcademicPanelVisibility();
+    showStep();
   }
 
   function buildPayload(submit, enrollmentId) {
     const course_id = parseInt(document.getElementById('course_id').value, 10);
+    const cat = document.getElementById('category').value;
+    const academic =
+      cat === 'New'
+        ? {
+            elem_school: document.getElementById('elem_school').value.trim(),
+            elem_year: document.getElementById('elem_year').value.trim() || null,
+            jhs_school: document.getElementById('jhs_school').value.trim(),
+            jhs_year: document.getElementById('jhs_year').value.trim() || null,
+            shs_school: document.getElementById('shs_school').value.trim(),
+            shs_strand: document.getElementById('shs_strand').value.trim() || null,
+            shs_year: document.getElementById('shs_year').value.trim() || null,
+          }
+        : null;
     return {
       submit,
       enrollment_id: enrollmentId || null,
       course_id,
       academic_year: document.getElementById('academic_year').value.trim(),
       semester: document.getElementById('semester').value,
-      category: document.getElementById('category').value,
+      category: cat,
       personal: {
         last_name: document.getElementById('plast').value.trim(),
         first_name: document.getElementById('pfirst').value.trim(),
@@ -191,15 +250,7 @@
         spouse_occupation: document.getElementById('spouse_occ').value.trim() || null,
         spouse_contact: document.getElementById('spouse_contact').value.trim() || null,
       },
-      academic: {
-        elem_school: document.getElementById('elem_school').value.trim(),
-        elem_year: document.getElementById('elem_year').value.trim() || null,
-        jhs_school: document.getElementById('jhs_school').value.trim(),
-        jhs_year: document.getElementById('jhs_year').value.trim() || null,
-        shs_school: document.getElementById('shs_school').value.trim(),
-        shs_strand: document.getElementById('shs_strand').value.trim() || null,
-        shs_year: document.getElementById('shs_year').value.trim() || null,
-      },
+      academic: academic,
       emergency: {
         name: document.getElementById('e_name').value.trim(),
         contact: document.getElementById('e_contact').value.trim(),
@@ -229,6 +280,85 @@
     if (s === 'Approved') return 'badge--ok';
     if (s === 'Rejected') return 'badge--reject';
     return 'badge--pending';
+  }
+
+  function renderPhaseDashboard(enrollments) {
+    const el = document.getElementById('phaseDashboardMount');
+    if (!el) return;
+    if (!enrollments.length) {
+      el.innerHTML =
+        '<div class="phase-row">' +
+        '<div class="phase-card">' +
+        '<span class="phase-card__num">1</span>' +
+        '<h3>Phase 1 — Application</h3>' +
+        '<p>Complete the enrollment form. <strong>New students</strong> provide K–12 academic background; <strong>returning students</strong> skip that section.</p>' +
+        '</div>' +
+        '<div class="phase-card phase-card--locked">' +
+        '<span class="phase-card__num">2</span>' +
+        '<h3>Phase 2 — Verification &amp; payment</h3>' +
+        '<p>New applicants: Registrar. Returning: pay online (GCash, bank) or at Accounting — approval required before you can proceed.</p>' +
+        '<div class="phase-card__chips"><span class="pay-chip pay-chip--cash">GCash</span><span class="pay-chip">Online / bank</span><span class="pay-chip">Accounting office</span></div>' +
+        '</div></div>' +
+        '<div class="phase-row" style="margin-top:1rem">' +
+        '<div class="phase-card phase-card--locked">' +
+        '<span class="phase-card__num">3</span>' +
+        '<h3>Phase 3 — Student Affairs</h3>' +
+        '<p>ID validation and final clearance.</p>' +
+        '</div></div>' +
+        '<p style="margin:1rem 0 0;font-size:0.88rem;color:var(--color-text-muted)">Open <strong>Enrollment</strong> in the sidebar to begin your application.</p>';
+      return;
+    }
+    const e = enrollments[0];
+    const isNew = e.category === 'New';
+    const p2Title = isNew ? 'Phase 2 — Registrar review' : 'Phase 2 — Payment &amp; Accounting';
+    const p2Desc = isNew
+      ? 'Registrar reviews your application. When this phase is approved, continue to Student Affairs (Phase 3).'
+      : 'Pay via GCash, bank transfer, or in person at Accounting. Upload your receipt. You cannot complete enrollment until Accounting approves your payment.';
+    const p2Note = isNew
+      ? ''
+      : '<div class="phase-card__chips" style="margin-top:0.75rem"><span class="pay-chip pay-chip--cash">GCash</span><span class="pay-chip">Bank / online</span><span class="pay-chip">Walk-in Accounting</span></div>';
+    const p2Locked = e.phase1_status !== 'Approved';
+    const p3Locked = e.phase2_status !== 'Approved';
+    el.innerHTML =
+      '<div class="phase-row">' +
+      '<div class="phase-card">' +
+      '<span class="phase-card__num">1</span>' +
+      '<h3>Phase 1 — Application</h3>' +
+      '<p>Form submitted and recorded. Status: <span class="badge ' +
+      badgeClass(e.phase1_status) +
+      '">' +
+      UI.escapeHtml(e.phase1_status) +
+      '</span></p></div>' +
+      '<div class="phase-card' +
+      (p2Locked ? ' phase-card--locked' : '') +
+      '">' +
+      '<span class="phase-card__num">2</span>' +
+      '<h3>' +
+      p2Title +
+      '</h3>' +
+      '<p>' +
+      p2Desc +
+      '</p>' +
+      p2Note +
+      '<p style="margin:0.75rem 0 0;font-size:0.82rem">Status: <span class="badge ' +
+      badgeClass(e.phase2_status) +
+      '">' +
+      UI.escapeHtml(e.phase2_status) +
+      '</span> · Office: <strong>' +
+      UI.escapeHtml(e.phase2_assigned_role) +
+      '</strong></p></div></div>' +
+      '<div class="phase-row" style="margin-top:1rem">' +
+      '<div class="phase-card' +
+      (p3Locked ? ' phase-card--locked' : '') +
+      '">' +
+      '<span class="phase-card__num">3</span>' +
+      '<h3>Phase 3 — Student Affairs</h3>' +
+      '<p>ID validation and final clearance.</p>' +
+      '<p style="margin:0.75rem 0 0;font-size:0.82rem">Status: <span class="badge ' +
+      badgeClass(e.phase3_status) +
+      '">' +
+      UI.escapeHtml(e.phase3_status) +
+      '</span></p></div></div>';
   }
 
   function renderTracker(enrollments) {
@@ -295,6 +425,7 @@
     try {
       const list = await api.get('/api/enrollment/mine');
       renderTracker(list);
+      renderPhaseDashboard(list);
     } catch (e) {
       console.error(e);
     }
@@ -827,7 +958,7 @@
         document.getElementById('spouse_occ').value = f.spouse_occupation || '';
         document.getElementById('spouse_contact').value = f.spouse_contact || '';
       }
-      if (draft.academic) {
+      if (draft.category === 'New' && draft.academic) {
         const a = draft.academic;
         document.getElementById('elem_school').value = a.elem_school || '';
         document.getElementById('elem_year').value = a.elem_year || '';
@@ -836,6 +967,13 @@
         document.getElementById('shs_school').value = a.shs_school || '';
         document.getElementById('shs_strand').value = a.shs_strand || '';
         document.getElementById('shs_year').value = a.shs_year || '';
+      } else {
+        ['elem_school', 'elem_year', 'jhs_school', 'jhs_year', 'shs_school', 'shs_strand', 'shs_year'].forEach(
+          (id) => {
+            const node = document.getElementById(id);
+            if (node) node.value = '';
+          }
+        );
       }
       if (draft.emergency) {
         const x = draft.emergency;
@@ -844,6 +982,8 @@
         document.getElementById('e_rel').value = x.relationship || '';
         document.getElementById('e_addr').value = x.address || '';
       }
+      const catEl = document.getElementById('category');
+      if (catEl) catEl.dispatchEvent(new Event('change'));
     } catch (e) {
       console.warn(e);
     }
@@ -855,6 +995,14 @@
   const chatLog = document.getElementById('chatDrawerLog');
   const chatIn = document.getElementById('chatDrawerInput');
   const chatSend = document.getElementById('chatDrawerSend');
+  const aiWelcomeBackdrop = document.getElementById('aiWelcomeBackdrop');
+
+  function openChatDrawer() {
+    drawer.classList.add('is-open');
+    drawer.setAttribute('aria-hidden', 'false');
+    if (chatIn) chatIn.focus();
+  }
+
   document.getElementById('chatClose').addEventListener('click', () => {
     drawer.classList.remove('is-open');
     drawer.setAttribute('aria-hidden', 'true');
@@ -863,12 +1011,9 @@
     drawer.classList.toggle('is-open');
     drawer.setAttribute('aria-hidden', drawer.classList.contains('is-open') ? 'false' : 'true');
   });
-  async function sendChat() {
-    const m = chatIn.value.trim();
-    if (!m) return;
-    chatIn.value = '';
-    chatLog.innerHTML +=
-      '<div class="chat-msg chat-msg--user">' + UI.escapeHtml(m) + '</div>';
+
+  async function postChatMessage(m) {
+    chatLog.innerHTML += '<div class="chat-msg chat-msg--user">' + UI.escapeHtml(m) + '</div>';
     chatLog.scrollTop = chatLog.scrollHeight;
     try {
       const r = await api.post('/api/ai/chat', { message: m });
@@ -878,16 +1023,57 @@
     }
     chatLog.scrollTop = chatLog.scrollHeight;
   }
+
+  async function sendChat() {
+    const m = chatIn.value.trim();
+    if (!m) return;
+    chatIn.value = '';
+    await postChatMessage(m);
+  }
   chatSend.addEventListener('click', sendChat);
   chatIn.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendChat();
   });
 
+  document.querySelectorAll('.chat-quick__btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const p = btn.getAttribute('data-prompt');
+      if (!p) return;
+      openChatDrawer();
+      await postChatMessage(p);
+    });
+  });
+
+  if (role === 'Student') {
+    if (aiWelcomeBackdrop && !sessionStorage.getItem('seait_ai_welcome_seen')) {
+      aiWelcomeBackdrop.classList.remove('hidden');
+      aiWelcomeBackdrop.setAttribute('aria-hidden', 'false');
+    }
+    const dismissAi = () => {
+      sessionStorage.setItem('seait_ai_welcome_seen', '1');
+      if (aiWelcomeBackdrop) {
+        aiWelcomeBackdrop.classList.add('hidden');
+        aiWelcomeBackdrop.setAttribute('aria-hidden', 'true');
+      }
+    };
+    document.getElementById('aiWelcomeOpenChat')?.addEventListener('click', () => {
+      dismissAi();
+      openChatDrawer();
+    });
+    document.getElementById('aiWelcomeDismiss')?.addEventListener('click', dismissAi);
+    aiWelcomeBackdrop?.addEventListener('click', (ev) => {
+      if (ev.target === aiWelcomeBackdrop) dismissAi();
+    });
+  } else {
+    fab.style.display = 'none';
+    aiWelcomeBackdrop?.remove();
+  }
+
   const views = {
     home: async () => {
       showView('');
       if (role === 'Student') {
-        setPageHead('Your enrollment', 'Track phases, forms, and payments — new applicants and returning students.');
+        setPageHead('Dashboard', 'Phases, payments, and status — new applicants and returning students.');
         main.appendChild(cloneTpl('tpl-student-home'));
         await refreshTracker();
         await loadHistory();
@@ -910,11 +1096,18 @@
       wireEnrollmentForm();
       await prefillDraft();
     },
-    payments: () => {
-      setPageHead('Payments', 'Upload official receipt for Accounting verification');
+    payments: async () => {
+      setPageHead('Payments', 'Online or in-person payment — Accounting must approve receipts');
       showView('');
       main.appendChild(cloneTpl('tpl-payments'));
       wirePayments();
+      try {
+        const list = await api.get('/api/enrollment/mine');
+        const inp = document.getElementById('payEnrollId');
+        if (inp && list.length && !inp.value) inp.value = String(list[0].id);
+      } catch (e) {
+        console.warn(e);
+      }
     },
     payverify: async () => {
       setPageHead('Payment verification', 'Review and approve uploaded receipts');
@@ -976,7 +1169,7 @@
   }
 
   if (role === 'Student') {
-    addNav('home', 'Overview', ic.home, () => views.home());
+    addNav('home', 'Dashboard', ic.home, () => views.home());
     addNav('form', 'Enrollment', ic.form, () => views.form());
     addNav('payments', 'Payments', ic.pay, () => views.payments());
     addNav('notify', 'Notifications', ic.bell, () => views.notify());
