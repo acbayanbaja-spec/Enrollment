@@ -5,7 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SEAIT — Online Enrollment</title>
     <link rel="stylesheet" href="css/design-system.css" />
+
+    <style>
+      /* Safe enhancements (won’t break system) */
+      .fade-in {
+        animation: fadeIn 1s ease forwards;
+        opacity: 0;
+      }
+
+      .fade-up {
+        animation: fadeUp 1s ease forwards;
+        opacity: 0;
+      }
+
+      .delay-1 { animation-delay: 0.3s; }
+      .delay-2 { animation-delay: 0.6s; }
+      .delay-3 { animation-delay: 0.9s; }
+
+      @keyframes fadeIn {
+        to { opacity: 1; }
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .seait-values {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 30px;
+      }
+
+      .value-box {
+        background: rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+        backdrop-filter: blur(6px);
+      }
+
+      .value-box span {
+        font-size: 24px;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .info-section {
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .info-section h2 {
+        margin-bottom: 10px;
+      }
+
+      .info-section p {
+        max-width: 700px;
+        margin: auto;
+        opacity: 0.9;
+      }
+    </style>
   </head>
+
   <body class="page-land page-enter">
     <div class="land-bg" aria-hidden="true">
       <span class="land-bg__mesh"></span>
@@ -13,7 +82,8 @@
       <span class="land-bg__orb land-bg__orb--2"></span>
       <span class="land-bg__orb land-bg__orb--3"></span>
     </div>
-    <header class="land-header">
+
+    <header class="land-header fade-in">
       <div class="land-header__brand">
         <img
           src="img/seait-logo.jpg"
@@ -27,43 +97,103 @@
       </div>
       <a href="login.html" class="land-btn land-btn--solid">Sign in</a>
     </header>
+
     <main class="land-hero">
-      <p class="land-eyebrow">Secure · phased · transparent</p>
-      <h1>Enrollment built for clarity and trust</h1>
-      <p class="land-lead">
-        Complete your application, move through structured phases, and track Registrar, Accounting, and Student Affairs
-        steps in one place — a calm, professional experience from signup to confirmation.
+      <p class="land-eyebrow fade-in delay-1">Secure · modern · student-centered</p>
+
+      <!-- ✅ UPDATED TITLE -->
+      <h1 class="fade-up delay-1">Welcome to SEAIT Online Enrollment</h1>
+
+      <p class="land-lead fade-up delay-2">
+        A streamlined and reliable platform designed to simplify your enrollment journey.
+        Easily complete your application, track progress, and move through each phase
+        with clarity, efficiency, and confidence.
       </p>
-      <div class="land-actions">
+
+      <div class="land-actions fade-up delay-2">
         <a href="login.html" class="land-btn land-btn--solid land-btn--pulse">Access portal</a>
-        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">Create student account</a>
+        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">
+          Create student account
+        </a>
       </div>
+
+      <!-- FEATURES -->
       <div class="land-features">
-        <article class="land-feature-card land-feature-card--delay1">
-          <span class="land-feature-card__icon" aria-hidden="true">1</span>
+        <article class="land-feature-card land-feature-card--delay1 fade-up">
+          <span class="land-feature-card__icon">1</span>
           <h3>Phase 1 — Application</h3>
-          <p>Guided form with validation. New students include academic background; returning students skip that section.</p>
+          <p>Submit your application with guided steps and accurate validation.</p>
         </article>
-        <article class="land-feature-card land-feature-card--delay2">
-          <span class="land-feature-card__icon" aria-hidden="true">2</span>
-          <h3>Phase 2 — Verification &amp; payment</h3>
-          <p>
-            New applicants: Registrar review. Returning students: pay online (e.g. GCash) or in person at Accounting —
-            enrollment stays on hold until payment is approved.
-          </p>
+
+        <article class="land-feature-card land-feature-card--delay2 fade-up">
+          <span class="land-feature-card__icon">2</span>
+          <h3>Phase 2 — Verification & Payment</h3>
+          <p>Track approval and complete payment securely through available methods.</p>
         </article>
-        <article class="land-feature-card land-feature-card--delay3">
-          <span class="land-feature-card__icon" aria-hidden="true">3</span>
-          <h3>Phase 3 — Student Affairs</h3>
-          <p>Final ID validation and clearance so you are fully enrolled for the term.</p>
+
+        <article class="land-feature-card land-feature-card--delay3 fade-up">
+          <span class="land-feature-card__icon">3</span>
+          <h3>Phase 3 — Final Clearance</h3>
+          <p>Complete validation and finalize your enrollment smoothly.</p>
         </article>
       </div>
+
+      <!-- ✅ MISSION -->
+      <section class="info-section fade-up delay-2">
+        <h2>Our Mission</h2>
+        <p>
+          To provide accessible, high-quality education while fostering innovation,
+          integrity, and excellence in every student.
+        </p>
+      </section>
+
+      <!-- ✅ VISION -->
+      <section class="info-section fade-up delay-3">
+        <h2>Our Vision</h2>
+        <p>
+          To become a leading institution recognized for producing competent,
+          responsible, and globally competitive graduates.
+        </p>
+      </section>
+
+      <!-- ✅ SEAIT MEANING -->
+      <section class="info-section fade-up delay-3">
+        <h2>What SEAIT Stands For</h2>
+
+        <div class="seait-values">
+          <div class="value-box">
+            <span>🤝</span>
+            Service
+          </div>
+          <div class="value-box">
+            <span>✨</span>
+            Excellence
+          </div>
+          <div class="value-box">
+            <span>⚖️</span>
+            Accountability
+          </div>
+          <div class="value-box">
+            <span>💡</span>
+            Innovation
+          </div>
+          <div class="value-box">
+            <span>🤜🤛</span>
+            Teamwork
+          </div>
+        </div>
+      </section>
     </main>
-    <footer class="land-footer">SEAIT-Inspired Online Enrollment System</footer>
+
+    <footer class="land-footer fade-in">
+      SEAIT Online Enrollment System
+    </footer>
+
     <script>
       if (window.location.hash === '#register') {
         sessionStorage.setItem('seait_open_register', '1');
       }
+
       document.getElementById('ctaRegister').addEventListener('click', function () {
         sessionStorage.setItem('seait_open_register', '1');
       });
