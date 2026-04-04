@@ -17,6 +17,18 @@
     return el;
   }
 
+  function ensureToastTopRoot() {
+    let el = document.getElementById('toast-root-top');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'toast-root-top';
+      el.className = 'toast-root toast-root--top-right';
+      el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
   /**
    * @param {'success'|'error'|'info'} type
    * @param {string} message
@@ -41,6 +53,25 @@
       t.classList.add('toast-leave');
       setTimeout(() => t.remove(), 280);
     }, TOAST_DURATION);
+  }
+
+  /** Top-right dismissible toast (e.g. OTP demo). */
+  function toastOtp(message) {
+    const root = ensureToastTopRoot();
+    const t = document.createElement('div');
+    t.className = 'toast toast--info toast--otp toast-enter';
+    t.innerHTML =
+      '<span class="toast__msg">' +
+      escapeHtml(message) +
+      '</span><button type="button" class="toast__dismiss" aria-label="Dismiss">&times;</button>';
+    root.appendChild(t);
+    const dismiss = () => {
+      t.classList.add('toast-leave');
+      setTimeout(() => t.remove(), 280);
+    };
+    t.querySelector('.toast__dismiss').addEventListener('click', dismiss);
+    requestAnimationFrame(() => t.classList.add('toast-enter-active'));
+    setTimeout(dismiss, 12000);
   }
 
   function escapeHtml(s) {
@@ -188,6 +219,7 @@
 
   window.UI = {
     toast,
+    toastOtp,
     openModal,
     openModalDual,
     setButtonLoading,

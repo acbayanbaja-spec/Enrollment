@@ -431,70 +431,6 @@
     }
   }
 
-  async function loadHistory() {
-    const el = document.getElementById('historyMount');
-    if (!el) return;
-    try {
-      const list = await api.get('/api/enrollment/mine');
-      if (!list.length) {
-        el.innerHTML = '<p style="color:var(--color-text-muted)">No records yet.</p>';
-        return;
-      }
-      el.innerHTML =
-        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Program</th><th>Term</th><th>P1</th><th>P2</th><th>P3</th></tr></thead><tbody>' +
-        list
-          .map(
-            (e) =>
-              '<tr><td>#' +
-              e.id +
-              '</td><td>' +
-              UI.escapeHtml(e.course_code || '') +
-              '</td><td>' +
-              UI.escapeHtml(e.academic_year) +
-              '</td><td><span class="badge ' +
-              badgeClass(e.phase1_status) +
-              '">' +
-              e.phase1_status +
-              '</span></td><td><span class="badge ' +
-              badgeClass(e.phase2_status) +
-              '">' +
-              e.phase2_status +
-              '</span></td><td><span class="badge ' +
-              badgeClass(e.phase3_status) +
-              '">' +
-              e.phase3_status +
-              '</span></td></tr>'
-          )
-          .join('') +
-        '</tbody></table></div>';
-    } catch (e) {
-      el.textContent = e.message;
-    }
-  }
-
-  async function loadAssistantSteps() {
-    const el = document.getElementById('stepsMount');
-    if (!el) return;
-    try {
-      const data = await api.get('/api/ai/assistant-steps');
-      el.innerHTML =
-        '<ol style="margin:0;padding-left:1.2rem;color:var(--color-text-muted);line-height:1.75">' +
-        data.steps
-          .map(
-            (s) =>
-              '<li><strong style="color:var(--color-text)">' +
-              UI.escapeHtml(s.title) +
-              '</strong> — ' +
-              UI.escapeHtml(s.hint) +
-              '</li>'
-          )
-          .join('') +
-        '</ol>';
-    } catch (e) {
-      el.textContent = 'Could not load assistant steps.';
-    }
-  }
-
   function wireEnrollmentForm() {
     initWizard();
     const form = document.getElementById('enrollmentForm');
@@ -536,45 +472,103 @@
   }
 
   function wirePayments() {
-    const btn = document.getElementById('payUpload');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
+    const onlineBlock = document.getElementById('payOnlineBlock');
+    const onsiteBlock = document.getElementById('payOnsiteBlock');
+    const tiles = document.querySelectorAll('[data-pay-method]');
+    if (!onlineBlock || !tiles.length) return;
+
+    let method = 'online';
+    let lastOtp = null;
+
+    function setMethod(m) {
+      method = m;
+      tiles.forEach((t) => t.classList.toggle('is-selected', t.getAttribute('data-pay-method') === m));
+      onlineBlock.classList.toggle('hidden', m !== 'online');
+      onsiteBlock.classList.toggle('hidden', m !== 'onsite');
+    }
+
+    tiles.forEach((t) => {
+      t.addEventListener('click', () => setMethod(t.getAttribute('data-pay-method')));
+    });
+
+    document.getElementById('paySendOtp')?.addEventListener('click', () => {
+      const mobile = (document.getElementById('payGcash') && document.getElementById('payGcash').value.trim()) || '';
+      if (!mobile || mobile.length < 10) {
+        UI.toast('error', 'Enter a valid GCash mobile number.');
+        return;
+      }
+      lastOtp = String(Math.floor(100000 + Math.random() * 900000));
+      UI.toastOtp('OTP sent to ' + mobile + '. Code: ' + lastOtp);
+    });
+
+    async function doUpload(fileInputId, amountFieldId) {
       document.getElementById('payMsg').innerHTML = '';
       const eid = document.getElementById('payEnrollId').value;
-      const file = document.getElementById('payFile').files[0];
-      if (!eid || !file) {
-        UI.toast('error', 'Enrollment ID and file are required.');
+      const file = document.getElementById(fileInputId).files[0];
+      if (!eid) {
+        UI.toast('error', 'No enrollment record found. Complete your application first.');
         return;
+      }
+      if (!file) {
+        UI.toast('error', 'Please attach your payment proof file.');
+        return;
+      }
+      if (method === 'online') {
+        const amt = document.getElementById('payAmountPhp').value.trim();
+        const gcash = document.getElementById('payGcash').value.trim();
+        const lrn = document.getElementById('payLrn').value.trim();
+        const otp = document.getElementById('payOtp').value.trim();
+        if (!amt || !gcash || !lrn) {
+          UI.toast('error', 'Fill in amount, GCash number, and reference (LRN/ID).');
+          return;
+        }
+        if (!lastOtp || otp !== lastOtp) {
+          UI.toast('error', 'Enter the OTP shown after you tap Send OTP (demo verification).');
+          return;
+        }
       }
       const fd = new FormData();
       fd.append('enrollment_form_id', eid);
       fd.append('file', file);
-      const amt = document.getElementById('payAmount').value;
-      if (amt) fd.append('amount', amt);
+      const amtEl = document.getElementById(amountFieldId);
+      if (amtEl && amtEl.value.trim()) fd.append('amount', amtEl.value.trim());
       try {
         await api.uploadForm('/api/payments/upload', fd);
-        UI.toast('success', 'Receipt uploaded successfully.');
+        UI.toast('success', 'Payment proof submitted. Awaiting Accounting verification.');
+        const eidIn = document.getElementById('payEnrollId');
+        if (eidIn && eidIn.value) eidIn.dispatchEvent(new Event('change'));
       } catch (e) {
         UI.toast('error', e.message);
       }
+    }
+
+    document.getElementById('paySubmit')?.addEventListener('click', () => {
+      method = 'online';
+      doUpload('payFile', 'payAmountPhp');
     });
+    document.getElementById('paySubmitOnsite')?.addEventListener('click', () => {
+      method = 'onsite';
+      doUpload('payFileOnsite', 'payAmountOnsite');
+    });
+
     const el = document.getElementById('payList');
     const eidIn = document.getElementById('payEnrollId');
     if (el && eidIn) {
-      eidIn.addEventListener('change', async () => {
+      const refreshList = async () => {
         if (!eidIn.value) return;
         try {
           const rows = await api.get('/api/payments/enrollment/' + eidIn.value);
           el.innerHTML =
             rows.length === 0
-              ? '<p>No receipts yet.</p>'
-              : '<ul style="margin:0;padding-left:1.2rem">' +
+              ? '<p class="pay-receipt-list__empty">No receipts on file yet.</p>'
+              : '<ul class="pay-receipt-list__ul">' +
                 rows.map((p) => '<li>#' + p.id + ' — ' + p.status + ' — ' + UI.escapeHtml(p.original_filename || '') + '</li>').join('') +
                 '</ul>';
         } catch (err) {
           el.textContent = err.message;
         }
-      });
+      };
+      eidIn.addEventListener('change', refreshList);
     }
   }
 
@@ -968,7 +962,7 @@
   const chatLog = document.getElementById('chatDrawerLog');
   const chatIn = document.getElementById('chatDrawerInput');
   const chatSend = document.getElementById('chatDrawerSend');
-  const aiWelcomeBackdrop = document.getElementById('aiWelcomeBackdrop');
+  const cloudAssistant = document.getElementById('cloudAssistant');
 
   function openChatDrawer() {
     drawer.classList.add('is-open');
@@ -1018,28 +1012,25 @@
   });
 
   if (role === 'Student') {
-    if (aiWelcomeBackdrop && !sessionStorage.getItem('seait_ai_welcome_seen')) {
-      aiWelcomeBackdrop.classList.remove('hidden');
-      aiWelcomeBackdrop.setAttribute('aria-hidden', 'false');
+    if (cloudAssistant && !sessionStorage.getItem('seait_ai_welcome_seen')) {
+      cloudAssistant.classList.remove('cloud-assistant--hidden');
+      cloudAssistant.setAttribute('aria-hidden', 'false');
     }
-    const dismissAi = () => {
+    const dismissCloud = () => {
       sessionStorage.setItem('seait_ai_welcome_seen', '1');
-      if (aiWelcomeBackdrop) {
-        aiWelcomeBackdrop.classList.add('hidden');
-        aiWelcomeBackdrop.setAttribute('aria-hidden', 'true');
+      if (cloudAssistant) {
+        cloudAssistant.classList.add('cloud-assistant--hidden');
+        cloudAssistant.setAttribute('aria-hidden', 'true');
       }
     };
-    document.getElementById('aiWelcomeOpenChat')?.addEventListener('click', () => {
-      dismissAi();
+    document.getElementById('cloudAssistChat')?.addEventListener('click', () => {
+      dismissCloud();
       openChatDrawer();
     });
-    document.getElementById('aiWelcomeDismiss')?.addEventListener('click', dismissAi);
-    aiWelcomeBackdrop?.addEventListener('click', (ev) => {
-      if (ev.target === aiWelcomeBackdrop) dismissAi();
-    });
+    document.getElementById('cloudAssistDiscard')?.addEventListener('click', dismissCloud);
   } else {
     fab.style.display = 'none';
-    aiWelcomeBackdrop?.remove();
+    cloudAssistant?.remove();
   }
 
   const views = {
@@ -1049,8 +1040,6 @@
         setPageHead('Dashboard', 'Phases, payments, and status — new applicants and returning students.');
         main.appendChild(cloneTpl('tpl-student-home'));
         await refreshTracker();
-        await loadHistory();
-        await loadAssistantSteps();
       } else if (role === 'Admin') {
         setPageHead('Dashboard', 'System overview and analytics');
         main.appendChild(cloneTpl('tpl-admin-home'));
@@ -1069,14 +1058,30 @@
       await prefillDraft();
     },
     payments: async () => {
-      setPageHead('Payments', 'Online or in-person payment — Accounting must approve receipts');
+      setPageHead('Payment', 'Online GCash or onsite — submit proof for Accounting');
       showView('');
       main.appendChild(cloneTpl('tpl-payments'));
       wirePayments();
       try {
         const list = await api.get('/api/enrollment/mine');
         const inp = document.getElementById('payEnrollId');
-        if (inp && list.length && !inp.value) inp.value = String(list[0].id);
+        const chip = document.getElementById('payEnrollChip');
+        if (inp && list.length) {
+          inp.value = String(list[0].id);
+          if (chip) {
+            chip.innerHTML =
+              '<span class="pay-enroll-chip__label">Enrollment</span> <strong>#' +
+              list[0].id +
+              '</strong> · ' +
+              UI.escapeHtml(list[0].course_code || '') +
+              ' · ' +
+              UI.escapeHtml(list[0].academic_year || '');
+          }
+          inp.dispatchEvent(new Event('change'));
+        } else if (chip) {
+          chip.innerHTML =
+            '<span class="pay-enroll-chip--warn">No enrollment found. Complete the enrollment form first.</span>';
+        }
       } catch (e) {
         console.warn(e);
       }

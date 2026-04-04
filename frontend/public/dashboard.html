@@ -87,31 +87,31 @@
       </div>
     </div>
 
-    <div id="aiWelcomeBackdrop" class="ai-welcome-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiWelcomeTitle" aria-hidden="true">
-      <div class="ai-welcome">
-        <div class="ai-welcome__head">
-          <img src="img/seait-mark.svg" alt="" class="ai-welcome__logo" width="40" height="40" />
+    <div id="cloudAssistant" class="cloud-assistant cloud-assistant--hidden" role="dialog" aria-modal="false" aria-labelledby="cloudAssistTitle" aria-hidden="true">
+      <div class="cloud-assistant__float" aria-hidden="true">
+        <span class="cloud-assistant__puff"></span>
+        <span class="cloud-assistant__puff cloud-assistant__puff--2"></span>
+        <span class="cloud-assistant__puff cloud-assistant__puff--3"></span>
+      </div>
+      <div class="cloud-assistant__card">
+        <div class="cloud-assistant__card-head">
+          <img src="img/seait-mark.svg" alt="" width="36" height="36" class="cloud-assistant__mark" />
           <div>
-            <h2 id="aiWelcomeTitle">How can I help you?</h2>
-            <p>SEAIT enrollment assistant</p>
+            <h3 id="cloudAssistTitle">How can I help you?</h3>
+            <p class="cloud-assistant__tag">SEAIT assistant</p>
           </div>
         </div>
-        <div class="ai-welcome__body">
-          <p>
-            Ask about phases, payments, Registrar or Accounting steps, or what to do next. Open the chat anytime from
-            the button at the bottom-right.
-          </p>
-          <div class="ai-welcome__actions">
-            <button type="button" class="ds-btn ds-btn--primary" id="aiWelcomeOpenChat">Open chat assistant</button>
-            <button type="button" class="ds-btn ds-btn--ghost" id="aiWelcomeDismiss">Not now</button>
-          </div>
+        <p class="cloud-assistant__copy">Get instant answers about enrollment, payments, and phases — or open the full chat.</p>
+        <div class="cloud-assistant__actions">
+          <button type="button" class="ds-btn ds-btn--ghost cloud-assistant__btn-discard" id="cloudAssistDiscard">Discard</button>
+          <button type="button" class="ds-btn ds-btn--primary cloud-assistant__btn-chat" id="cloudAssistChat">Chat assistant</button>
         </div>
       </div>
     </div>
 
     <!-- Student home -->
     <template id="tpl-student-home">
-      <div class="student-dash-grid student-dash-grid--modern">
+      <div class="student-dash-single">
         <div class="ds-card ds-card--hero ds-card--enrollment-progress">
           <div class="enrollment-progress-head">
             <h2>Enrollment progress</h2>
@@ -120,14 +120,6 @@
             </p>
           </div>
           <div class="phase-dashboard phase-dashboard--stepper" id="phaseDashboardMount"></div>
-        </div>
-        <div class="ds-card ds-card--glass">
-          <h2>Enrollment history</h2>
-          <div id="historyMount"></div>
-        </div>
-        <div class="ds-card ds-card--glass">
-          <h2>Recommended next steps</h2>
-          <div id="stepsMount"></div>
         </div>
       </div>
     </template>
@@ -394,41 +386,78 @@
     </template>
 
     <template id="tpl-payments">
-      <div class="ds-card">
-        <h2>Phase 2 — Payments</h2>
-        <p class="smart-hint">
-          If you are a <strong>returning student</strong> (2nd year and up), Accounting verifies your payment — you
-          cannot complete enrollment until they approve. Pay online (GCash, bank transfer, etc.) and upload your
-          receipt, or pay in person at the Accounting office and obtain proof to upload.
-        </p>
-        <div class="phase-card__chips" style="margin-bottom: 1rem">
-          <span class="pay-chip pay-chip--cash">GCash / mobile wallet</span>
-          <span class="pay-chip">Bank transfer / online</span>
-          <span class="pay-chip">In person at Accounting</span>
+      <div class="pay-page">
+        <div class="ds-card pay-page__intro">
+          <h2>Payment</h2>
+          <p class="pay-page__lead">
+            Accounting must verify your payment before enrollment can continue. Choose <strong>online</strong> (GCash) or
+            <strong>onsite</strong> (office), then attach your proof of payment.
+          </p>
+          <input type="hidden" id="payEnrollId" value="" />
+          <div class="pay-enroll-chip" id="payEnrollChip" aria-live="polite"></div>
         </div>
-        <h3 style="margin-top: 0; font-size: 1rem">Upload receipt</h3>
-        <p style="color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0">
-          Use a clear screenshot or PDF. Accepted: JPG, PNG, PDF, WebP.
-        </p>
-        <div id="payMsg"></div>
-        <div class="grid-2">
-          <div class="ds-field-inline">
-            <label>Enrollment ID *</label>
-            <input type="number" id="payEnrollId" min="1" />
+
+        <div class="pay-method-grid" role="group" aria-label="Payment method">
+          <button type="button" class="pay-method-tile is-selected" data-pay-method="online" id="payTileOnline">
+            <span class="pay-method-tile__icon pay-method-tile__icon--card" aria-hidden="true"></span>
+            <span class="pay-method-tile__title">Online payment</span>
+            <span class="pay-method-tile__sub">Fast and automated</span>
+          </button>
+          <button type="button" class="pay-method-tile" data-pay-method="onsite" id="payTileOnsite">
+            <span class="pay-method-tile__icon pay-method-tile__icon--building" aria-hidden="true"></span>
+            <span class="pay-method-tile__title">Onsite payment</span>
+            <span class="pay-method-tile__sub">Pay at the office</span>
+          </button>
+        </div>
+
+        <div class="ds-card pay-panel" id="payOnlineBlock">
+          <h3 class="pay-panel__title">Online payment details</h3>
+          <div id="payMsg"></div>
+          <div class="grid-2 pay-form-grid">
+            <div class="ds-field-inline">
+              <label for="payAmountPhp">Amount (₱) *</label>
+              <input type="text" id="payAmountPhp" inputmode="decimal" placeholder="500.00" autocomplete="off" />
+            </div>
+            <div class="ds-field-inline">
+              <label for="payGcash">GCash mobile number *</label>
+              <input type="tel" id="payGcash" placeholder="09XXXXXXXXX" autocomplete="tel" />
+            </div>
+            <div class="ds-field-inline" style="grid-column: 1 / -1">
+              <label for="payLrn">Reference (LRN / ID) *</label>
+              <input type="text" id="payLrn" placeholder="e.g. 2024-01234" autocomplete="off" />
+            </div>
+            <div class="ds-field-inline pay-otp-row" style="grid-column: 1 / -1">
+              <div class="pay-otp-field">
+                <label for="payOtp">OTP code *</label>
+                <input type="text" id="payOtp" placeholder="Enter 6 digit code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" />
+              </div>
+              <button type="button" class="ds-btn ds-btn--ghost pay-send-otp" id="paySendOtp">Send OTP</button>
+            </div>
           </div>
-          <div class="ds-field-inline">
-            <label>Amount (PHP)</label>
-            <input type="text" id="payAmount" placeholder="15000.00" />
-          </div>
-          <div class="ds-field-inline" style="grid-column: 1 / -1">
-            <label>Receipt file *</label>
+          <div class="ds-field-inline pay-receipt-block">
+            <label for="payFile">Payment proof (screenshot / receipt) *</label>
             <input type="file" id="payFile" accept=".jpg,.jpeg,.png,.pdf,.webp" />
           </div>
+          <button type="button" class="ds-btn ds-btn--primary pay-submit-btn" id="paySubmit">Submit payment</button>
+          <div id="payList" class="pay-receipt-list"></div>
         </div>
-        <button type="button" class="ds-btn ds-btn--primary" id="payUpload" style="width: auto; margin-top: 0.75rem">
-          Upload receipt
-        </button>
-        <div id="payList" style="margin-top: 1rem; font-size: 0.9rem; color: var(--color-text-muted)"></div>
+
+        <div class="ds-card pay-panel pay-panel--onsite hidden" id="payOnsiteBlock">
+          <h3 class="pay-panel__title">Onsite payment</h3>
+          <p class="pay-onsite-copy">
+            Visit the <strong>Accounting office</strong> during business hours. Pay your assessed amount and obtain an
+            official receipt or acknowledgment. Upload a clear photo or scan below so staff can verify your payment.
+          </p>
+          <div class="ds-field-inline">
+            <label for="payAmountOnsite">Amount paid (₱)</label>
+            <input type="text" id="payAmountOnsite" inputmode="decimal" placeholder="Optional" />
+          </div>
+          <div class="ds-field-inline pay-receipt-block">
+            <label for="payFileOnsite">Official receipt / proof *</label>
+            <input type="file" id="payFileOnsite" accept=".jpg,.jpeg,.png,.pdf,.webp" />
+          </div>
+          <button type="button" class="ds-btn ds-btn--primary pay-submit-btn" id="paySubmitOnsite">Submit payment</button>
+        </div>
       </div>
     </template>
 
