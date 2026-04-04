@@ -1,202 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SEAIT — Online Enrollment</title>
-    <link rel="stylesheet" href="css/design-system.css" />
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEAIT — Online Enrollment</title>
+<link rel="stylesheet" href="css/design-system.css">
 
-    <style>
-      /* Safe enhancements (won’t break system) */
-      .fade-in {
-        animation: fadeIn 1s ease forwards;
-        opacity: 0;
-      }
+<style>
 
-      .fade-up {
-        animation: fadeUp 1s ease forwards;
-        opacity: 0;
-      }
+/* =========================
+   GLOBAL RESET + BASE
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-      .delay-1 { animation-delay: 0.3s; }
-      .delay-2 { animation-delay: 0.6s; }
-      .delay-3 { animation-delay: 0.9s; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-      @keyframes fadeIn {
-        to { opacity: 1; }
-      }
+/* =========================
+   BACKGROUND EFFECTS
+========================= */
+.bg-animation {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
 
-      @keyframes fadeUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.3;
+  animation: float 20s infinite ease-in-out;
+}
 
-      .seait-values {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        margin-top: 30px;
-      }
+.circle:nth-child(1) {
+  width: 300px;
+  height: 300px;
+  background: #38bdf8;
+  top: 10%;
+  left: 10%;
+}
 
-      .value-box {
-        background: rgba(255,255,255,0.08);
-        padding: 15px;
-        border-radius: 12px;
-        text-align: center;
-        backdrop-filter: blur(6px);
-      }
+.circle:nth-child(2) {
+  width: 400px;
+  height: 400px;
+  background: #6366f1;
+  bottom: 10%;
+  right: 10%;
+}
 
-      .value-box span {
-        font-size: 24px;
-        display: block;
-        margin-bottom: 5px;
-      }
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-40px); }
+}
 
-      .info-section {
-        margin-top: 40px;
-        text-align: center;
-      }
+/* =========================
+   HEADER
+========================= */
+.land-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  backdrop-filter: blur(10px);
+}
 
-      .info-section h2 {
-        margin-bottom: 10px;
-      }
+.land-btn {
+  padding: 12px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: 0.3s;
+}
 
-      .info-section p {
-        max-width: 700px;
-        margin: auto;
-        opacity: 0.9;
-      }
-    </style>
-  </head>
+.land-btn--solid {
+  background: #38bdf8;
+  color: #0f172a;
+}
 
-  <body class="page-land page-enter">
-    <div class="land-bg" aria-hidden="true">
-      <span class="land-bg__mesh"></span>
-      <span class="land-bg__orb land-bg__orb--1"></span>
-      <span class="land-bg__orb land-bg__orb--2"></span>
-      <span class="land-bg__orb land-bg__orb--3"></span>
+.land-btn--solid:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(56,189,248,0.5);
+}
+
+/* =========================
+   HERO
+========================= */
+.hero {
+  text-align: center;
+  padding: 80px 20px;
+  animation: fadeUp 1s ease;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.hero p {
+  opacity: 0.85;
+  max-width: 600px;
+  margin: auto;
+  line-height: 1.6;
+}
+
+/* =========================
+   CARD SYSTEM
+========================= */
+.section {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  max-width: 1000px;
+  margin: auto;
+}
+
+.card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  padding: 25px;
+  border-radius: 16px;
+  transition: 0.4s;
+}
+
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.card span {
+  font-size: 30px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* =========================
+   ANIMATIONS
+========================= */
+.fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeUp 1s forwards;
+}
+
+.delay1 { animation-delay: 0.3s; }
+.delay2 { animation-delay: 0.6s; }
+.delay3 { animation-delay: 0.9s; }
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================
+   FOOTER
+========================= */
+footer {
+  text-align: center;
+  padding: 30px;
+  opacity: 0.7;
+}
+
+/* =========================
+   BUTTON GROUP
+========================= */
+.actions {
+  margin-top: 30px;
+}
+
+.actions a {
+  margin: 10px;
+}
+
+/* =========================
+   EXTRA POLISH
+========================= */
+h2 {
+  margin-bottom: 15px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="bg-animation">
+  <div class="circle"></div>
+  <div class="circle"></div>
+</div>
+
+<header class="land-header">
+  <img src="img/seait-logo.jpg" width="180">
+  <a href="login.html" class="land-btn land-btn--solid">Sign In</a>
+</header>
+
+<!-- HERO -->
+<section class="hero fade-up">
+  <h1>Welcome to SEAIT Online Enrollment</h1>
+  <p>
+    A modern, secure, and user-friendly enrollment platform designed to simplify
+    your academic journey. Experience seamless application, real-time tracking,
+    and efficient processing — all in one place.
+  </p>
+
+  <div class="actions">
+    <a href="login.html" class="land-btn land-btn--solid">Access Portal</a>
+    <a href="login.html#register" class="land-btn">Create Account</a>
+  </div>
+</section>
+
+<!-- MISSION -->
+<section class="section fade-up delay1">
+  <h2>Our Mission</h2>
+  <p>
+    To deliver accessible, high-quality education while promoting innovation,
+    integrity, and excellence in every student.
+  </p>
+</section>
+
+<!-- VISION -->
+<section class="section fade-up delay2">
+  <h2>Our Vision</h2>
+  <p>
+    To become a globally recognized institution that develops competent,
+    responsible, and future-ready graduates.
+  </p>
+</section>
+
+<!-- VALUES -->
+<section class="section fade-up delay3">
+  <h2>What SEAIT Stands For</h2>
+
+  <div class="card-container">
+    <div class="card">
+      <span>🤝</span>
+      <h3>Service</h3>
+      <p>Commitment to serve with integrity and dedication.</p>
     </div>
 
-    <header class="land-header fade-in">
-      <div class="land-header__brand">
-        <img
-          src="img/seait-logo.jpg"
-          alt="SEAIT Enrollment"
-          class="land-header__logo-img"
-          width="220"
-          height="48"
-          decoding="async"
-          onerror="this.onerror=null;this.src='img/seait-logo.svg'"
-        />
-      </div>
-      <a href="login.html" class="land-btn land-btn--solid">Sign in</a>
-    </header>
+    <div class="card">
+      <span>✨</span>
+      <h3>Excellence</h3>
+      <p>Striving for the highest standards in all aspects.</p>
+    </div>
 
-    <main class="land-hero">
-      <p class="land-eyebrow fade-in delay-1">Secure · modern · student-centered</p>
+    <div class="card">
+      <span>⚖️</span>
+      <h3>Accountability</h3>
+      <p>Taking responsibility for actions and outcomes.</p>
+    </div>
 
-      <!-- ✅ UPDATED TITLE -->
-      <h1 class="fade-up delay-1">Welcome to SEAIT Online Enrollment</h1>
+    <div class="card">
+      <span>💡</span>
+      <h3>Innovation</h3>
+      <p>Encouraging creativity and forward-thinking solutions.</p>
+    </div>
 
-      <p class="land-lead fade-up delay-2">
-        A streamlined and reliable platform designed to simplify your enrollment journey.
-        Easily complete your application, track progress, and move through each phase
-        with clarity, efficiency, and confidence.
-      </p>
+    <div class="card">
+      <span>🤜🤛</span>
+      <h3>Teamwork</h3>
+      <p>Working together to achieve shared success.</p>
+    </div>
+  </div>
+</section>
 
-      <div class="land-actions fade-up delay-2">
-        <a href="login.html" class="land-btn land-btn--solid land-btn--pulse">Access portal</a>
-        <a href="login.html#register" class="land-btn land-btn--outline" id="ctaRegister">
-          Create student account
-        </a>
-      </div>
+<footer>
+  SEAIT Online Enrollment System © 2026
+</footer>
 
-      <!-- FEATURES -->
-      <div class="land-features">
-        <article class="land-feature-card land-feature-card--delay1 fade-up">
-          <span class="land-feature-card__icon">1</span>
-          <h3>Phase 1 — Application</h3>
-          <p>Submit your application with guided steps and accurate validation.</p>
-        </article>
+<script>
+/* Smooth entrance animation trigger */
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('.fade-up').forEach(el => {
+    el.style.opacity = "1";
+  });
+});
+</script>
 
-        <article class="land-feature-card land-feature-card--delay2 fade-up">
-          <span class="land-feature-card__icon">2</span>
-          <h3>Phase 2 — Verification & Payment</h3>
-          <p>Track approval and complete payment securely through available methods.</p>
-        </article>
-
-        <article class="land-feature-card land-feature-card--delay3 fade-up">
-          <span class="land-feature-card__icon">3</span>
-          <h3>Phase 3 — Final Clearance</h3>
-          <p>Complete validation and finalize your enrollment smoothly.</p>
-        </article>
-      </div>
-
-      <!-- ✅ MISSION -->
-      <section class="info-section fade-up delay-2">
-        <h2>Our Mission</h2>
-        <p>
-          To provide accessible, high-quality education while fostering innovation,
-          integrity, and excellence in every student.
-        </p>
-      </section>
-
-      <!-- ✅ VISION -->
-      <section class="info-section fade-up delay-3">
-        <h2>Our Vision</h2>
-        <p>
-          To become a leading institution recognized for producing competent,
-          responsible, and globally competitive graduates.
-        </p>
-      </section>
-
-      <!-- ✅ SEAIT MEANING -->
-      <section class="info-section fade-up delay-3">
-        <h2>What SEAIT Stands For</h2>
-
-        <div class="seait-values">
-          <div class="value-box">
-            <span>🤝</span>
-            Service
-          </div>
-          <div class="value-box">
-            <span>✨</span>
-            Excellence
-          </div>
-          <div class="value-box">
-            <span>⚖️</span>
-            Accountability
-          </div>
-          <div class="value-box">
-            <span>💡</span>
-            Innovation
-          </div>
-          <div class="value-box">
-            <span>🤜🤛</span>
-            Teamwork
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="land-footer fade-in">
-      SEAIT Online Enrollment System
-    </footer>
-
-    <script>
-      if (window.location.hash === '#register') {
-        sessionStorage.setItem('seait_open_register', '1');
-      }
-
-      document.getElementById('ctaRegister').addEventListener('click', function () {
-        sessionStorage.setItem('seait_open_register', '1');
-      });
-    </script>
-  </body>
+</body>
 </html>
