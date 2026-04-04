@@ -16,7 +16,15 @@
       <div class="app-header__left">
         <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
         <a href="dashboard.html" class="app-header__brand-link" aria-label="SEAIT Enrollment home">
-          <img src="img/seait-logo.svg" alt="SEAIT Enrollment" class="app-header__logo-img" width="220" height="40" />
+          <img
+            src="img/seait-logo.jpg"
+            alt="SEAIT Enrollment"
+            class="app-header__logo-img"
+            width="260"
+            height="48"
+            decoding="async"
+            onerror="this.onerror=null;this.src='img/seait-logo.svg'"
+          />
         </a>
       </div>
       <div class="app-header__right">
@@ -89,24 +97,32 @@
 
     <div id="cloudAssistLayer" class="cloud-assistant-layer cloud-assistant-layer--hidden" aria-hidden="true">
       <button type="button" class="cloud-assistant-backdrop" id="cloudAssistBackdrop" aria-label="Close welcome message"></button>
-      <div id="cloudAssistant" class="cloud-assistant" role="dialog" aria-modal="true" aria-labelledby="cloudAssistTitle">
-        <div class="cloud-assistant__float" aria-hidden="true">
-          <span class="cloud-assistant__puff"></span>
-          <span class="cloud-assistant__puff cloud-assistant__puff--2"></span>
-          <span class="cloud-assistant__puff cloud-assistant__puff--3"></span>
-        </div>
-        <div class="cloud-assistant__card">
-          <div class="cloud-assistant__card-head">
-            <img src="img/seait-mark.svg" alt="" width="36" height="36" class="cloud-assistant__mark" />
-            <div>
-              <h3 id="cloudAssistTitle">How can I help you?</h3>
-              <p class="cloud-assistant__tag">SEAIT assistant</p>
-            </div>
+      <div class="cloud-assistant-anchor">
+        <div id="cloudAssistant" class="cloud-assistant" role="dialog" aria-modal="true" aria-labelledby="cloudAssistTitle">
+          <div class="cloud-assistant__float" aria-hidden="true">
+            <span class="cloud-assistant__puff"></span>
+            <span class="cloud-assistant__puff cloud-assistant__puff--2"></span>
+            <span class="cloud-assistant__puff cloud-assistant__puff--3"></span>
           </div>
-          <p class="cloud-assistant__copy">Get instant answers about enrollment, payments, and phases — or open the full chat.</p>
-          <div class="cloud-assistant__actions">
-            <button type="button" class="ds-btn ds-btn--ghost cloud-assistant__btn-discard" id="cloudAssistDiscard">Discard</button>
-            <button type="button" class="ds-btn ds-btn--primary cloud-assistant__btn-chat" id="cloudAssistChat">Chat assistant</button>
+          <div class="cloud-assistant__card">
+            <div class="cloud-assistant__card-head">
+              <img src="img/seait-mark.svg" alt="" width="36" height="36" class="cloud-assistant__mark" onerror="this.style.display='none'" />
+              <div>
+                <h3 id="cloudAssistTitle">How can I help you?</h3>
+                <p class="cloud-assistant__tag">SEAIT assistant</p>
+              </div>
+            </div>
+            <p class="cloud-assistant__copy">
+              Get instant answers about enrollment, payments, and phases — or open the full assistant.
+            </p>
+            <ul class="cloud-assistant__tips" aria-label="Quick tips">
+              <li>Check your phase stepper above for what to do next.</li>
+              <li>Use Payments after Registrar approves your form (when applicable).</li>
+            </ul>
+            <div class="cloud-assistant__actions">
+              <button type="button" class="ds-btn ds-btn--ghost cloud-assistant__btn-discard" id="cloudAssistDiscard">Not now</button>
+              <button type="button" class="ds-btn ds-btn--primary cloud-assistant__btn-chat" id="cloudAssistChat">Open chat</button>
+            </div>
           </div>
         </div>
       </div>

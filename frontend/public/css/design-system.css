@@ -1555,6 +1555,15 @@ body {
   transform: scale(0.96);
 }
 
+.fab-chat--welcome-open {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.88) translateY(10px) !important;
+  transition:
+    opacity 0.35s var(--ease-out),
+    transform 0.35s var(--ease-out);
+}
+
 .chat-drawer {
   position: fixed;
   bottom: 5.5rem;
@@ -2275,8 +2284,10 @@ body {
 .land-header__logo-img {
   height: 44px;
   width: auto;
-  max-width: min(280px, 72vw);
+  max-width: min(320px, 78vw);
   display: block;
+  object-fit: contain;
+  object-position: left center;
   filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.15));
 }
 
@@ -2286,9 +2297,12 @@ body {
 }
 
 .login-brand__logo {
-  max-width: min(300px, 100%);
+  max-width: min(340px, 100%);
   height: auto;
+  max-height: 56px;
   display: block;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .login-brand h1 {
@@ -2303,10 +2317,12 @@ body {
 }
 
 .app-header__logo-img {
-  height: 38px;
+  height: 40px;
   width: auto;
-  max-width: min(220px, 52vw);
+  max-width: min(300px, 58vw);
   display: block;
+  object-fit: contain;
+  object-position: left center;
 }
 
 @media (max-width: 520px) {
@@ -2650,12 +2666,9 @@ body {
 .cloud-assistant-layer {
   position: fixed;
   inset: 0;
-  z-index: 10060;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.25rem;
+  z-index: 100080;
   box-sizing: border-box;
+  isolation: isolate;
 }
 
 .cloud-assistant-layer--hidden {
@@ -2686,6 +2699,17 @@ body {
   animation: cloudBackdropIn 0.4s var(--ease-out) both;
 }
 
+.cloud-assistant-anchor {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1rem, 4vw, 2rem);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
 @keyframes cloudBackdropIn {
   from {
     opacity: 0;
@@ -2700,9 +2724,10 @@ body {
   bottom: auto;
   left: auto;
   z-index: 1;
-  max-width: min(400px, calc(100vw - 2.5rem));
+  max-width: min(420px, calc(100vw - 2rem));
   width: 100%;
   pointer-events: auto;
+  margin: 0;
 }
 
 .cloud-assistant-layer:not(.cloud-assistant-layer--hidden) .cloud-assistant {
@@ -2779,11 +2804,39 @@ body {
   position: relative;
   background: linear-gradient(165deg, #ffffff 0%, #fffbeb 100%);
   border: 1px solid rgba(234, 88, 12, 0.2);
-  border-radius: var(--radius-lg);
-  padding: 1.15rem 1.25rem 1.2rem;
+  border-radius: 1.35rem 1.5rem 1.25rem 1.4rem / 1.2rem 1.35rem 1.4rem 1.3rem;
+  padding: 1.25rem 1.35rem 1.3rem;
   box-shadow:
-    0 20px 50px rgba(234, 88, 12, 0.15),
-    0 8px 24px rgba(15, 23, 42, 0.08);
+    0 24px 56px rgba(234, 88, 12, 0.18),
+    0 10px 28px rgba(15, 23, 42, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+  animation: cloudCardGlow 4.5s ease-in-out infinite;
+}
+
+@keyframes cloudCardGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 24px 56px rgba(234, 88, 12, 0.16),
+      0 10px 28px rgba(15, 23, 42, 0.09),
+      0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+  }
+  50% {
+    box-shadow:
+      0 28px 64px rgba(251, 146, 60, 0.22),
+      0 12px 32px rgba(15, 23, 42, 0.11),
+      0 0 0 1px rgba(255, 255, 255, 0.75) inset;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-assistant__card {
+    animation: none;
+  }
+
+  .cloud-assistant-layer:not(.cloud-assistant-layer--hidden) .cloud-assistant {
+    animation: none;
+  }
 }
 
 .cloud-assistant__card-head {
@@ -2814,35 +2867,53 @@ body {
 }
 
 .cloud-assistant__copy {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   font-size: 0.88rem;
   line-height: 1.55;
   color: #57534e;
 }
 
-.cloud-assistant__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.cloud-assistant__tips {
+  margin: 0 0 1.1rem;
+  padding: 0.65rem 0.75rem 0.65rem 1.35rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #57534e;
+  background: rgba(255, 251, 235, 0.85);
+  border: 1px solid rgba(234, 88, 12, 0.12);
+  border-radius: var(--radius-md);
 }
 
-.cloud-assistant__btn-discard {
-  flex: 1;
-  min-width: 100px;
+.cloud-assistant__tips li {
+  margin: 0.2rem 0;
+}
+
+.cloud-assistant__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.cloud-assistant__btn-discard,
+.cloud-assistant__btn-chat {
+  min-width: 0;
+  width: 100%;
+  justify-content: center;
 }
 
 .cloud-assistant__btn-chat {
-  flex: 1.2;
-  min-width: 120px;
   border-radius: 999px;
   box-shadow: 0 6px 20px rgba(234, 88, 12, 0.35);
 }
 
-@media (max-width: 600px) {
-  .cloud-assistant-layer {
-    padding: 1rem;
+@media (max-width: 380px) {
+  .cloud-assistant__actions {
+    grid-template-columns: 1fr;
   }
+}
 
+@media (max-width: 600px) {
   .cloud-assistant-layer .cloud-assistant {
     max-width: none;
   }

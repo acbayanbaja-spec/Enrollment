@@ -998,6 +998,16 @@
   const chatIn = document.getElementById('chatDrawerInput');
   const chatSend = document.getElementById('chatDrawerSend');
   const cloudAssistLayer = document.getElementById('cloudAssistLayer');
+  const WELCOME_KEY = 'seait_ai_welcome_v4';
+
+  try {
+    if (/[?&]resetWelcome=1(?:&|$)/.test(window.location.search)) {
+      sessionStorage.removeItem(WELCOME_KEY);
+      sessionStorage.removeItem('seait_ai_welcome_seen');
+    }
+  } catch (err) {
+    /* private mode */
+  }
 
   function openChatDrawer() {
     drawer.classList.add('is-open');
@@ -1009,7 +1019,7 @@
     drawer.classList.remove('is-open');
     drawer.setAttribute('aria-hidden', 'true');
   });
-  fab.addEventListener('click', () => {
+  fab?.addEventListener('click', () => {
     drawer.classList.toggle('is-open');
     drawer.setAttribute('aria-hidden', drawer.classList.contains('is-open') ? 'false' : 'true');
   });
@@ -1047,12 +1057,34 @@
   });
 
   if (role === 'Student') {
-    if (cloudAssistLayer && !sessionStorage.getItem('seait_ai_welcome_seen')) {
+    if (cloudAssistLayer && cloudAssistLayer.parentNode) {
+      document.body.appendChild(cloudAssistLayer);
+    }
+
+    function setWelcomeOpen(open) {
+      if (fab) fab.classList.toggle('fab-chat--welcome-open', !!open);
+    }
+
+    let welcomeOpen = false;
+    try {
+      welcomeOpen = !sessionStorage.getItem(WELCOME_KEY);
+    } catch (err) {
+      welcomeOpen = true;
+    }
+
+    if (cloudAssistLayer && welcomeOpen) {
       cloudAssistLayer.classList.remove('cloud-assistant-layer--hidden');
       cloudAssistLayer.setAttribute('aria-hidden', 'false');
+      setWelcomeOpen(true);
     }
+
     const dismissCloud = () => {
-      sessionStorage.setItem('seait_ai_welcome_seen', '1');
+      try {
+        sessionStorage.setItem(WELCOME_KEY, '1');
+      } catch (err) {
+        /* ignore */
+      }
+      setWelcomeOpen(false);
       if (cloudAssistLayer) {
         cloudAssistLayer.classList.add('cloud-assistant-layer--hidden');
         cloudAssistLayer.setAttribute('aria-hidden', 'true');
