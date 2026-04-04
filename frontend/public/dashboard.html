@@ -16,7 +16,7 @@
       <div class="app-header__left">
         <button type="button" class="app-header__menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
         <a href="dashboard.html" class="app-header__brand-link" aria-label="SEAIT Enrollment home">
-          <img src="img/seait-logo.svg" alt="SEAIT" class="app-header__logo-img" width="152" height="38" />
+          <img src="img/seait-logo.svg" alt="SEAIT Enrollment" class="app-header__logo-img" width="220" height="40" />
         </a>
       </div>
       <div class="app-header__right">
@@ -87,24 +87,27 @@
       </div>
     </div>
 
-    <div id="cloudAssistant" class="cloud-assistant cloud-assistant--hidden" role="dialog" aria-modal="false" aria-labelledby="cloudAssistTitle" aria-hidden="true">
-      <div class="cloud-assistant__float" aria-hidden="true">
-        <span class="cloud-assistant__puff"></span>
-        <span class="cloud-assistant__puff cloud-assistant__puff--2"></span>
-        <span class="cloud-assistant__puff cloud-assistant__puff--3"></span>
-      </div>
-      <div class="cloud-assistant__card">
-        <div class="cloud-assistant__card-head">
-          <img src="img/seait-mark.svg" alt="" width="36" height="36" class="cloud-assistant__mark" />
-          <div>
-            <h3 id="cloudAssistTitle">How can I help you?</h3>
-            <p class="cloud-assistant__tag">SEAIT assistant</p>
-          </div>
+    <div id="cloudAssistLayer" class="cloud-assistant-layer cloud-assistant-layer--hidden" aria-hidden="true">
+      <button type="button" class="cloud-assistant-backdrop" id="cloudAssistBackdrop" aria-label="Close welcome message"></button>
+      <div id="cloudAssistant" class="cloud-assistant" role="dialog" aria-modal="true" aria-labelledby="cloudAssistTitle">
+        <div class="cloud-assistant__float" aria-hidden="true">
+          <span class="cloud-assistant__puff"></span>
+          <span class="cloud-assistant__puff cloud-assistant__puff--2"></span>
+          <span class="cloud-assistant__puff cloud-assistant__puff--3"></span>
         </div>
-        <p class="cloud-assistant__copy">Get instant answers about enrollment, payments, and phases — or open the full chat.</p>
-        <div class="cloud-assistant__actions">
-          <button type="button" class="ds-btn ds-btn--ghost cloud-assistant__btn-discard" id="cloudAssistDiscard">Discard</button>
-          <button type="button" class="ds-btn ds-btn--primary cloud-assistant__btn-chat" id="cloudAssistChat">Chat assistant</button>
+        <div class="cloud-assistant__card">
+          <div class="cloud-assistant__card-head">
+            <img src="img/seait-mark.svg" alt="" width="36" height="36" class="cloud-assistant__mark" />
+            <div>
+              <h3 id="cloudAssistTitle">How can I help you?</h3>
+              <p class="cloud-assistant__tag">SEAIT assistant</p>
+            </div>
+          </div>
+          <p class="cloud-assistant__copy">Get instant answers about enrollment, payments, and phases — or open the full chat.</p>
+          <div class="cloud-assistant__actions">
+            <button type="button" class="ds-btn ds-btn--ghost cloud-assistant__btn-discard" id="cloudAssistDiscard">Discard</button>
+            <button type="button" class="ds-btn ds-btn--primary cloud-assistant__btn-chat" id="cloudAssistChat">Chat assistant</button>
+          </div>
         </div>
       </div>
     </div>
@@ -387,6 +390,7 @@
 
     <template id="tpl-payments">
       <div class="pay-page">
+        <div id="payPageAlert" class="pay-page__alert" role="status" aria-live="polite"></div>
         <div class="ds-card pay-page__intro">
           <h2>Payment</h2>
           <p class="pay-page__lead">
@@ -412,7 +416,6 @@
 
         <div class="ds-card pay-panel" id="payOnlineBlock">
           <h3 class="pay-panel__title">Online payment details</h3>
-          <div id="payMsg"></div>
           <div class="grid-2 pay-form-grid">
             <div class="ds-field-inline">
               <label for="payAmountPhp">Amount (₱) *</label>

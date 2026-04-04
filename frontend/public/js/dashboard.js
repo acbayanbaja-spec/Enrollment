@@ -472,10 +472,11 @@
   }
 
   function wirePayments() {
-    const onlineBlock = document.getElementById('payOnlineBlock');
-    const onsiteBlock = document.getElementById('payOnsiteBlock');
-    const tiles = document.querySelectorAll('[data-pay-method]');
-    if (!onlineBlock || !tiles.length) return;
+    const root = main;
+    const onlineBlock = root.querySelector('#payOnlineBlock');
+    const onsiteBlock = root.querySelector('#payOnsiteBlock');
+    const tiles = root.querySelectorAll('[data-pay-method]');
+    if (!onlineBlock || !onsiteBlock || !tiles.length) return;
 
     let method = 'online';
     let lastOtp = null;
@@ -488,66 +489,100 @@
     }
 
     tiles.forEach((t) => {
-      t.addEventListener('click', () => setMethod(t.getAttribute('data-pay-method')));
+      t.addEventListener('click', () => setMethod(t.getAttribute('data-pay-method') || 'online'));
     });
 
-    document.getElementById('paySendOtp')?.addEventListener('click', () => {
-      const mobile = (document.getElementById('payGcash') && document.getElementById('payGcash').value.trim()) || '';
-      if (!mobile || mobile.length < 10) {
-        UI.toast('error', 'Enter a valid GCash mobile number.');
+    function payPageAlert(type, message) {
+      const el = root.querySelector('#payPageAlert');
+      if (!el) return;
+      el.className = 'pay-page__alert';
+      if (!message) {
+        el.textContent = '';
         return;
       }
-      lastOtp = String(Math.floor(100000 + Math.random() * 900000));
-      UI.toastOtp('OTP sent to ' + mobile + '. Code: ' + lastOtp);
-    });
+      if (type === 'error') el.classList.add('pay-page__alert--error');
+      if (type === 'success') el.classList.add('pay-page__alert--success');
+      el.textContent = message;
+    }
+
+    const paySendOtp = root.querySelector('#paySendOtp');
+    if (paySendOtp) {
+      paySendOtp.addEventListener('click', () => {
+        const gc = root.querySelector('#payGcash');
+        const mobile = (gc && gc.value.trim()) || '';
+        if (!mobile || mobile.replace(/\D/g, '').length < 10) {
+          UI.toast('error', 'Enter a valid GCash mobile number (at least 10 digits).');
+          return;
+        }
+        lastOtp = String(Math.floor(100000 + Math.random() * 900000));
+        const msg = 'OTP sent to ' + mobile + '. Code: ' + lastOtp;
+        if (typeof UI.toastOtp === 'function') {
+          UI.toastOtp(msg);
+        } else {
+          UI.toast('info', 'Demo OTP: ' + lastOtp);
+        }
+      });
+    }
 
     async function doUpload(fileInputId, amountFieldId) {
-      document.getElementById('payMsg').innerHTML = '';
-      const eid = document.getElementById('payEnrollId').value;
-      const file = document.getElementById(fileInputId).files[0];
+      payPageAlert('', '');
+      const eid = (root.querySelector('#payEnrollId') && root.querySelector('#payEnrollId').value) || '';
+      const fileInput = root.querySelector('#' + fileInputId);
+      const file = fileInput && fileInput.files[0];
       if (!eid) {
-        UI.toast('error', 'No enrollment record found. Complete your application first.');
+        const msg = 'No enrollment record found. Complete the enrollment form first.';
+        payPageAlert('error', msg);
+        UI.toast('error', msg);
         return;
       }
       if (!file) {
-        UI.toast('error', 'Please attach your payment proof file.');
+        const msg = 'Please attach your payment proof file.';
+        payPageAlert('error', msg);
+        UI.toast('error', msg);
         return;
       }
       if (method === 'online') {
-        const amt = document.getElementById('payAmountPhp').value.trim();
-        const gcash = document.getElementById('payGcash').value.trim();
-        const lrn = document.getElementById('payLrn').value.trim();
-        const otp = document.getElementById('payOtp').value.trim();
+        const amt = root.querySelector('#payAmountPhp') && root.querySelector('#payAmountPhp').value.trim();
+        const gcash = root.querySelector('#payGcash') && root.querySelector('#payGcash').value.trim();
+        const lrn = root.querySelector('#payLrn') && root.querySelector('#payLrn').value.trim();
+        const otp = root.querySelector('#payOtp') && root.querySelector('#payOtp').value.trim();
         if (!amt || !gcash || !lrn) {
-          UI.toast('error', 'Fill in amount, GCash number, and reference (LRN/ID).');
+          const msg = 'Fill in amount, GCash number, and reference (LRN/ID).';
+          payPageAlert('error', msg);
+          UI.toast('error', msg);
           return;
         }
         if (!lastOtp || otp !== lastOtp) {
-          UI.toast('error', 'Enter the OTP shown after you tap Send OTP (demo verification).');
+          const msg = 'Tap Send OTP and enter the 6-digit code shown in the notification (demo).';
+          payPageAlert('error', msg);
+          UI.toast('error', msg);
           return;
         }
       }
       const fd = new FormData();
       fd.append('enrollment_form_id', eid);
       fd.append('file', file);
-      const amtEl = document.getElementById(amountFieldId);
+      const amtEl = root.querySelector('#' + amountFieldId);
       if (amtEl && amtEl.value.trim()) fd.append('amount', amtEl.value.trim());
       try {
         await api.uploadForm('/api/payments/upload', fd);
-        UI.toast('success', 'Payment proof submitted. Awaiting Accounting verification.');
-        const eidIn = document.getElementById('payEnrollId');
+        const ok = 'Payment proof submitted. Awaiting Accounting verification.';
+        payPageAlert('success', ok);
+        UI.toast('success', ok);
+        const eidIn = root.querySelector('#payEnrollId');
         if (eidIn && eidIn.value) eidIn.dispatchEvent(new Event('change'));
       } catch (e) {
+        payPageAlert('error', e.message);
         UI.toast('error', e.message);
       }
     }
 
-    document.getElementById('paySubmit')?.addEventListener('click', () => {
-      method = 'online';
+    root.querySelector('#paySubmit')?.addEventListener('click', () => {
+      setMethod('online');
       doUpload('payFile', 'payAmountPhp');
     });
-    document.getElementById('paySubmitOnsite')?.addEventListener('click', () => {
-      method = 'onsite';
+    root.querySelector('#paySubmitOnsite')?.addEventListener('click', () => {
+      setMethod('onsite');
       doUpload('payFileOnsite', 'payAmountOnsite');
     });
 
@@ -962,7 +997,7 @@
   const chatLog = document.getElementById('chatDrawerLog');
   const chatIn = document.getElementById('chatDrawerInput');
   const chatSend = document.getElementById('chatDrawerSend');
-  const cloudAssistant = document.getElementById('cloudAssistant');
+  const cloudAssistLayer = document.getElementById('cloudAssistLayer');
 
   function openChatDrawer() {
     drawer.classList.add('is-open');
@@ -1012,25 +1047,31 @@
   });
 
   if (role === 'Student') {
-    if (cloudAssistant && !sessionStorage.getItem('seait_ai_welcome_seen')) {
-      cloudAssistant.classList.remove('cloud-assistant--hidden');
-      cloudAssistant.setAttribute('aria-hidden', 'false');
+    if (cloudAssistLayer && !sessionStorage.getItem('seait_ai_welcome_seen')) {
+      cloudAssistLayer.classList.remove('cloud-assistant-layer--hidden');
+      cloudAssistLayer.setAttribute('aria-hidden', 'false');
     }
     const dismissCloud = () => {
       sessionStorage.setItem('seait_ai_welcome_seen', '1');
-      if (cloudAssistant) {
-        cloudAssistant.classList.add('cloud-assistant--hidden');
-        cloudAssistant.setAttribute('aria-hidden', 'true');
+      if (cloudAssistLayer) {
+        cloudAssistLayer.classList.add('cloud-assistant-layer--hidden');
+        cloudAssistLayer.setAttribute('aria-hidden', 'true');
       }
     };
+    document.getElementById('cloudAssistBackdrop')?.addEventListener('click', dismissCloud);
     document.getElementById('cloudAssistChat')?.addEventListener('click', () => {
       dismissCloud();
       openChatDrawer();
     });
     document.getElementById('cloudAssistDiscard')?.addEventListener('click', dismissCloud);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && cloudAssistLayer && !cloudAssistLayer.classList.contains('cloud-assistant-layer--hidden')) {
+        dismissCloud();
+      }
+    });
   } else {
     fab.style.display = 'none';
-    cloudAssistant?.remove();
+    cloudAssistLayer?.remove();
   }
 
   const views = {
