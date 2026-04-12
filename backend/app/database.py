@@ -2,6 +2,7 @@
 SQLAlchemy engine and session factory.
 """
 import os
+import re
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
@@ -25,14 +26,18 @@ def _normalize_database_url(raw: str) -> str:
     if "connect_timeout" not in q:
         url = url.update_query_dict({"connect_timeout": "10"})
 
-    # Remote Postgres (Render, Neon, RDS, …) almost always requires TLS.
+    # TLS: Render *internal* hostnames look like dpg-xxxxx-a (no dot). Those use private TCP and
+    # libpq TLS negotiation can fail or confuse auth; default sslmode=disable for that pattern.
+    # Hostnames with a dot (e.g. *.render.com) use TLS — prefer or DATABASE_SSL_MODE override.
     host = (url.host or "").lower()
     is_local = host in ("localhost", "127.0.0.1", "::1") or not host
+    is_render_internal = bool(re.fullmatch(r"dpg-[a-z0-9]+-[ab]", host, flags=re.IGNORECASE))
     ssl_mode = os.getenv("DATABASE_SSL_MODE", "").strip().lower()
     if ssl_mode in ("disable", "allow", "prefer", "require", "verify-ca", "verify-full"):
         url = url.update_query_dict({"sslmode": ssl_mode})
+    elif is_render_internal and "sslmode" not in q and "ssl" not in q:
+        url = url.update_query_dict({"sslmode": "disable"})
     elif not is_local and "sslmode" not in q and "ssl" not in q:
-        # Prefer TLS when available; set DATABASE_SSL_MODE=require for strict SSL (many cloud DBs).
         url = url.update_query_dict({"sslmode": "prefer"})
 
     return str(url)

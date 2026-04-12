@@ -26,10 +26,15 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def _coalesce_empty_database_url(cls, v: object) -> object:
-        """Treat blank env (common dashboard mistake) as the same as unset (use default)."""
-        if v is None or (isinstance(v, str) and not v.strip()):
+        """Treat blank env as unset; strip quotes/BOM/whitespace from pasted Render URLs."""
+        if v is None or not isinstance(v, str):
+            return v
+        s = v.strip().strip("\ufeff\u200b")  # BOM / zero-width
+        if not s:
             return "postgresql://postgres:postgres@localhost:5432/enrollment_db"
-        return v
+        if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
+            s = s[1:-1].strip()
+        return s
 
     cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
 
