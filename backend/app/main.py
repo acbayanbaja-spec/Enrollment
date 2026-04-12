@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from app.config import get_settings
 from app.database import engine
@@ -35,6 +36,33 @@ _SCHEMA_STARTUP_ATTEMPTS = int(os.getenv("DB_STARTUP_ATTEMPTS", "10"))
 _SCHEMA_STARTUP_DELAY_SEC = float(os.getenv("DB_STARTUP_DELAY_SEC", "2.5"))
 
 
+def _is_recoverable_db_startup_error(exc: BaseException) -> bool:
+    """
+    True for wrong password / unreachable host — app can still serve /health and static UI
+    while DATABASE_URL is fixed. False for SQL bugs in migrations (must fail deploy).
+    """
+    if isinstance(exc, RuntimeError):
+        s = str(exc)
+        if "Schema patch step failed" in s or "ensure_schema failed" in s:
+            return False
+        return "DATABASE_URL was rejected" in s or "hostname could not be resolved" in s
+    if isinstance(exc, OperationalError):
+        raw = (str(getattr(exc, "orig", None) or exc)).lower()
+        return any(
+            phrase in raw
+            for phrase in (
+                "password authentication failed",
+                "connection refused",
+                "could not connect",
+                "timeout",
+                "could not translate host name",
+                "name or service not known",
+                "server closed the connection",
+            )
+        )
+    return False
+
+
 def _cors_middleware_kwargs():
     """Browsers reject allow_credentials=True with allow_origins=['*']; handle wildcard safely."""
     origins = settings.cors_origin_list
@@ -50,9 +78,15 @@ async def lifespan(app: FastAPI):
     """
     Ensure database tables exist and PostgreSQL is aligned with the ORM (no DBeaver required).
     Set SKIP_AUTO_DB_SETUP=1 to disable (external migrations only).
+
+    If DATABASE_URL is wrong or DB is unreachable, by default the app still starts (degraded)
+    so Render binds a port and /health works; set STRICT_DB_STARTUP=true to fail deploy instead.
     """
+    strict_db = os.getenv("STRICT_DB_STARTUP", "false").lower() in ("1", "true", "yes")
+
     if os.getenv("SKIP_AUTO_DB_SETUP", "").lower() in ("1", "true", "yes"):
         logger.warning("SKIP_AUTO_DB_SETUP is set — skipping automatic schema (create_all + patches).")
+        app.state.db_ready = True
         yield
         return
 
@@ -61,6 +95,7 @@ async def lifespan(app: FastAPI):
         try:
             ensure_schema(engine)
             logger.info("Database schema ready on attempt %s/%s.", attempt, attempts)
+            app.state.db_ready = True
             break
         except Exception as e:
             logger.warning(
@@ -69,10 +104,20 @@ async def lifespan(app: FastAPI):
                 attempts,
                 e,
             )
-            if attempt >= attempts:
-                logger.exception("Database schema setup failed after all retries.")
-                raise
-            time.sleep(_SCHEMA_STARTUP_DELAY_SEC)
+            recoverable = _is_recoverable_db_startup_error(e)
+            if attempt < attempts:
+                time.sleep(_SCHEMA_STARTUP_DELAY_SEC)
+                continue
+            if recoverable and not strict_db:
+                logger.error(
+                    "Starting in degraded mode: database not reachable or credentials rejected. "
+                    "Update DATABASE_URL on Render and redeploy. "
+                    "Set STRICT_DB_STARTUP=true if you want the deploy to fail when the DB is unavailable."
+                )
+                app.state.db_ready = False
+                break
+            logger.exception("Database schema setup failed after all retries.")
+            raise
     yield
 
 
@@ -120,6 +165,11 @@ def health_live() -> dict:
 def health_api() -> dict:
     """App status including database connectivity (may take up to connect_timeout if DB is down)."""
     payload: dict = {"status": "ok", "service": settings.app_name}
+    if getattr(app.state, "db_ready", True) is False:
+        payload["status"] = "degraded"
+        payload["database"] = "unavailable"
+        payload["hint"] = "DATABASE_URL rejected or DB unreachable at startup — update credentials on Render."
+        return payload
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))

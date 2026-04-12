@@ -114,6 +114,7 @@ Enrollment/
    - `SECRET_KEY` — long random string.
    - `CORS_ORIGINS` — your public web URL (e.g. `https://your-service.onrender.com`).
    - `SKIP_AUTO_DB_SETUP` — leave unset or `false`. The app runs **`create_all` + PostgreSQL patches** on every boot so tables and columns (e.g. `users.department_scope`) stay in sync without DBeaver. Set `true` only if you manage DDL externally.
+   - `STRICT_DB_STARTUP` — default **`false`**. If the database is unreachable or **`DATABASE_URL` is rejected** (wrong password), the service still **starts in degraded mode** so Render binds a port and `/health` returns 200; fix `/api/health` and login by pasting the correct **Internal Database URL**. Set **`true`** if you want the deploy to **fail** when the DB is not available.
 4. After deploy, run `python seed.py` from a **Render shell** (or local with `DATABASE_URL`) if you need demo users, or use `/api/auth/register` as **Admin** to create accounts.
 
 You can also connect this repo to Render using `render.yaml` (adjust `rootDir` and env as needed).
