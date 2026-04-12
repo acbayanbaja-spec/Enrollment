@@ -1,5 +1,5 @@
--- Run once against existing DB: psql or pgAdmin
--- Adds Department role support, transfer students, user department scope
+-- Optional manual migration (psql / DBeaver). The app also applies this automatically
+-- on startup for PostgreSQL via backend/app/schema_patches.py (unless SKIP_AUTO_DB_SETUP=1).
 
 BEGIN;
 

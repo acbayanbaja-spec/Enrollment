@@ -1,6 +1,7 @@
 """
 Initialize database roles, admin user, course curriculum (run once).
-Usage (from backend/):  set INIT_DB=true && python seed.py
+Usage (from backend/):  python seed.py
+(Ensure the API has started at least once on PostgreSQL, or run seed after tables exist.)
 """
 import os
 import sys
@@ -8,8 +9,9 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app.config import get_settings
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, engine
 from app.models import Course, CurriculumSubject, CutOffDate, Role, Student, User
+from app.schema_patches import ensure_schema
 from app.security import hash_password
 
 settings = get_settings()
@@ -51,7 +53,7 @@ BSIT_SUBJECTS = [
 
 
 def run() -> None:
-    Base.metadata.create_all(bind=engine)
+    ensure_schema(engine, force=True)
     db = SessionLocal()
     try:
         roles_data = [

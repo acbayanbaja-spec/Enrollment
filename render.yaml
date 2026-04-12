@@ -18,7 +18,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
-      - key: INIT_DB
+      # Tables + PostgreSQL patches run automatically on startup (see app.schema_patches).
+      # Set SKIP_AUTO_DB_SETUP=true only if you apply DDL entirely outside the app.
+      - key: SKIP_AUTO_DB_SETUP
         value: "false"
       - key: DATABASE_URL
         sync: false

@@ -62,10 +62,11 @@ Enrollment/
    pip install -r requirements.txt
    ```
 
-4. **Initialize tables (development) and seed demo users**
+4. **Create demo users (tables are created when you start the API)**
+
+   Start `uvicorn` once so the app runs `create_all` + PostgreSQL patches, then:
 
    ```bash
-   set INIT_DB=true
    python seed.py
    ```
 
@@ -76,8 +77,9 @@ Enrollment/
    | admin@seait.edu.ph       | Admin@2026!  | Admin       |
    | student@seait.edu.ph     | Student@2026!| Student     |
    | registrar@seait.edu.ph   | Staff@2026!  | Registrar   |
-   | accounting@seait.edu.ph    | Staff@2026!  | Accounting  |
+   | accounting@seait.edu.ph  | Staff@2026!  | Accounting  |
    | sao@seait.edu.ph         | Staff@2026!  | Student Affairs Office |
+   | dept.computing@seait.edu.ph | Staff@2026! | Department (scope: Computing) |
 
 5. **Run API + static UI**
 
@@ -111,15 +113,15 @@ Enrollment/
    - `DATABASE_URL` — paste the PostgreSQL URL (the app accepts `postgresql://` from Render).
    - `SECRET_KEY` — long random string.
    - `CORS_ORIGINS` — your public web URL (e.g. `https://your-service.onrender.com`).
-   - `INIT_DB` — `true` once to create tables via SQLAlchemy, or run `database/schema.sql` in the SQL console and keep `INIT_DB=false`.
-4. After deploy, run `python seed.py` from a **Render shell** (or local with VPN) if you need demo users, or use `/api/auth/register` as **Admin** to create accounts.
+   - `SKIP_AUTO_DB_SETUP` — leave unset or `false`. The app runs **`create_all` + PostgreSQL patches** on every boot so tables and columns (e.g. `users.department_scope`) stay in sync without DBeaver. Set `true` only if you manage DDL externally.
+4. After deploy, run `python seed.py` from a **Render shell** (or local with `DATABASE_URL`) if you need demo users, or use `/api/auth/register` as **Admin** to create accounts.
 
 You can also connect this repo to Render using `render.yaml` (adjust `rootDir` and env as needed).
 
 ## Security notes (thesis / production)
 
 - Change all default passwords; rotate `SECRET_KEY`.
-- Prefer running `database/schema.sql` in production and managing migrations explicitly instead of `INIT_DB=true` on every boot.
+- The service applies **automatic schema setup** on startup (PostgreSQL + SQLAlchemy models). Use `SKIP_AUTO_DB_SETUP=true` only if you prefer external migrations only.
 - Protect `/media` with signed URLs or authenticated download routes.
 - Enable HTTPS only; set strict `CORS_ORIGINS`.
 

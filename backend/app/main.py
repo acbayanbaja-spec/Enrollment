@@ -1,6 +1,7 @@
 """
 FastAPI application entry — CORS, static frontend, API routers.
 """
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -11,8 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.config import get_settings
-from app.database import Base, engine
-from app.schema_patches import apply_postgres_patches
+from app.database import engine
+from app.schema_patches import ensure_schema
 from app.routers import (
     ai_routes,
     announcements,
@@ -26,6 +27,7 @@ from app.routers import (
 )
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def _cors_middleware_kwargs():
@@ -40,10 +42,16 @@ def _cors_middleware_kwargs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Apply idempotent DB patches (e.g. missing columns on Render), then optional table create."""
-    apply_postgres_patches(engine)
-    if os.getenv("INIT_DB", "").lower() in ("1", "true", "yes"):
-        Base.metadata.create_all(bind=engine)
+    """
+    Ensure database tables exist and PostgreSQL is aligned with the ORM (no DBeaver required).
+    Set SKIP_AUTO_DB_SETUP=1 to disable (external migrations only).
+    """
+    try:
+        ensure_schema(engine)
+        logger.info("Database schema ready (create_all + optional PostgreSQL patches).")
+    except Exception:
+        logger.exception("Database schema setup failed — fix DB connectivity or SQL errors below.")
+        raise
     yield
 
 
