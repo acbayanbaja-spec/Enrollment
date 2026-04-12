@@ -11,10 +11,36 @@ import os
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.exc import OperationalError
 
 
 def _skip() -> bool:
     return os.getenv("SKIP_AUTO_DB_SETUP", "").lower() in ("1", "true", "yes")
+
+
+def _reraise_db_helpful(exc: OperationalError) -> None:
+    """Turn cryptic psycopg auth errors into actionable Render / env guidance."""
+    orig = getattr(exc, "orig", None)
+    raw = str(orig) if orig else str(exc)
+    msg = raw.lower()
+
+    if "password authentication failed" in msg:
+        raise RuntimeError(
+            "DATABASE_URL was rejected by PostgreSQL (wrong user or password). "
+            "This is not an application bug — update credentials on Render. "
+            "Steps: (1) Open your Render PostgreSQL → Connect → copy Internal Database URL. "
+            "(2) On your Web Service → Environment → set DATABASE_URL to that exact value. "
+            "(3) If you ever reset the DB password or recreated the database, paste the new URL again. "
+            "(4) If the password contains @ # % + : / ? characters, URL-encode them in the connection string."
+        ) from exc
+
+    if "could not translate host name" in msg or "name or service not known" in msg:
+        raise RuntimeError(
+            "DATABASE_URL hostname could not be resolved. Check for typos and that the PostgreSQL "
+            "instance still exists on Render."
+        ) from exc
+
+    raise exc
 
 
 def _table_exists(conn: Connection, table_name: str) -> bool:
@@ -37,6 +63,8 @@ def _exec_block(engine: Engine, label: str, fn) -> None:
     try:
         with engine.begin() as conn:
             fn(conn)
+    except OperationalError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Schema patch step failed ({label}): {e}") from e
 
@@ -161,7 +189,8 @@ def ensure_schema(engine: Engine, *, force: bool = False) -> None:
 
     try:
         Base.metadata.create_all(bind=engine)
+        apply_postgres_patches(engine, force=force)
+    except OperationalError as e:
+        _reraise_db_helpful(e)
     except Exception as e:
-        raise RuntimeError(f"create_all failed: {e}") from e
-
-    apply_postgres_patches(engine, force=force)
+        raise RuntimeError(f"ensure_schema failed: {e}") from e

@@ -118,6 +118,17 @@ Enrollment/
 
 You can also connect this repo to Render using `render.yaml` (adjust `rootDir` and env as needed).
 
+### Render: `password authentication failed for user "…"`
+
+The **Web Service** `DATABASE_URL` does not match the **current** PostgreSQL credentials. The app cannot fix this in code.
+
+1. In Render, open your **PostgreSQL** → **Connect** (or **Info**).
+2. Copy **Internal Database URL** (preferred for the API and DB in the same region/account).
+3. On your **Web Service** → **Environment** → set **`DATABASE_URL`** to that value (replace any old value completely).
+4. **Redeploy** the web service.
+
+If you **reset the database password**, **restored a backup**, or **recreated** the Postgres instance, you must paste the **new** URL again. Passwords with characters like `@`, `#`, `%`, `+` must be **URL-encoded** inside the URL (e.g. `@` → `%40`).
+
 ## Security notes (thesis / production)
 
 - Change all default passwords; rotate `SECRET_KEY`.
