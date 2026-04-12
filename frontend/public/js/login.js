@@ -75,7 +75,8 @@
       emailIn.value = email;
       pwIn.value = '';
       pwIn.focus();
-      if (window.UI) UI.toast('info', 'Email filled — enter password Staff@2026!');
+      const pwHint = email === 'admin@seait.edu.ph' ? 'Admin@2026!' : 'Staff@2026!';
+      if (window.UI) UI.toast('info', 'Email filled — use password ' + pwHint);
     });
   });
 

@@ -22,6 +22,7 @@ def _user_out(u: User) -> UserOut:
         email=u.email,
         full_name=u.full_name,
         role_name=u.role.name if u.role else "",
+        department_scope=getattr(u, "department_scope", None),
     )
 
 

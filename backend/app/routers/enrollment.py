@@ -17,10 +17,17 @@ from app.models import (
     EnrollmentFamily,
     EnrollmentForm,
     EnrollmentPersonal,
+    EnrollmentTransfer,
+    Payment,
     Student,
     User,
 )
-from app.schemas import EnrollmentDraftCreate, EnrollmentSubmitResponse, PhaseDecision
+from app.schemas import (
+    AccountingPhaseApprove,
+    EnrollmentDraftCreate,
+    EnrollmentSubmitResponse,
+    PhaseDecision,
+)
 from app.services.cutoff import is_phase_open
 from app.services.notifications import notify_role_users, notify_user
 
@@ -28,7 +35,7 @@ router = APIRouter(prefix="/api/enrollment", tags=["enrollment"])
 
 
 def _phase2_role_for_category(category: str) -> str:
-    return "Registrar" if category == "New" else "Accounting"
+    return "Registrar" if category in ("New", "Transfer") else "Accounting"
 
 
 def _serialize_enrollment(e: EnrollmentForm) -> dict[str, Any]:
@@ -37,6 +44,7 @@ def _serialize_enrollment(e: EnrollmentForm) -> dict[str, Any]:
         "id": e.id,
         "course_id": e.course_id,
         "course_code": c.code if c else None,
+        "course_department": c.department if c else None,
         "academic_year": e.academic_year,
         "semester": e.semester,
         "category": e.category,
@@ -76,6 +84,16 @@ def _serialize_enrollment(e: EnrollmentForm) -> dict[str, Any]:
             "spouse_name": f.spouse_name,
             "spouse_occupation": f.spouse_occupation,
             "spouse_contact": f.spouse_contact,
+        }
+    if e.transfer and e.category == "Transfer":
+        t = e.transfer
+        out["transfer"] = {
+            "current_school": t.current_school,
+            "current_program": t.current_program,
+            "last_semester_attended": t.last_semester_attended,
+            "previous_course_code": t.previous_course_code,
+            "units_completed": t.units_completed,
+            "reason_for_transfer": t.reason_for_transfer,
         }
     if e.academic and e.category == "New":
         a = e.academic
@@ -145,7 +163,7 @@ def _apply_family(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -
 
 
 def _apply_academic(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -> None:
-    """New students store K–12 background; returning students have no academic row."""
+    """New students store K–12 background; returning and transfer students have no academic row."""
     row = db.query(EnrollmentAcademic).filter(EnrollmentAcademic.enrollment_form_id == e.id).first()
     if body.category != "New":
         if row:
@@ -164,6 +182,26 @@ def _apply_academic(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session)
     row.shs_school = a.shs_school
     row.shs_strand = a.shs_strand
     row.shs_year = a.shs_year
+
+
+def _apply_transfer(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -> None:
+    row = db.query(EnrollmentTransfer).filter(EnrollmentTransfer.enrollment_form_id == e.id).first()
+    if body.category != "Transfer":
+        if row:
+            db.delete(row)
+        return
+    if not body.transfer:
+        return
+    t = body.transfer
+    if not row:
+        row = EnrollmentTransfer(enrollment_form_id=e.id)
+        db.add(row)
+    row.current_school = t.current_school
+    row.current_program = t.current_program
+    row.last_semester_attended = t.last_semester_attended
+    row.previous_course_code = t.previous_course_code
+    row.units_completed = t.units_completed
+    row.reason_for_transfer = t.reason_for_transfer
 
 
 def _apply_emergency(e: EnrollmentForm, body: EnrollmentDraftCreate, db: Session) -> None:
@@ -225,6 +263,7 @@ def save_enrollment(
     _apply_personal(e, body, db)
     _apply_family(e, body, db)
     _apply_academic(e, body, db)
+    _apply_transfer(e, body, db)
     _apply_emergency(e, body, db)
 
     if body.submit:
@@ -232,6 +271,11 @@ def save_enrollment(
             raise HTTPException(
                 status_code=400,
                 detail="Academic background is required before submitting as a new student.",
+            )
+        if body.category == "Transfer" and not body.transfer:
+            raise HTTPException(
+                status_code=400,
+                detail="Transfer information (current school, previous program) is required before submitting.",
             )
         ok, msg = is_phase_open(db, 1)
         if not ok:
@@ -300,6 +344,7 @@ def list_mine(
             joinedload(EnrollmentForm.personal),
             joinedload(EnrollmentForm.family),
             joinedload(EnrollmentForm.academic),
+            joinedload(EnrollmentForm.transfer),
             joinedload(EnrollmentForm.emergency),
         )
         .filter(EnrollmentForm.student_id == student.id)
@@ -322,6 +367,7 @@ def get_one(
             joinedload(EnrollmentForm.personal),
             joinedload(EnrollmentForm.family),
             joinedload(EnrollmentForm.academic),
+            joinedload(EnrollmentForm.transfer),
             joinedload(EnrollmentForm.emergency),
         )
         .filter(EnrollmentForm.id == enrollment_id)
@@ -333,6 +379,10 @@ def get_one(
     if role == "Student":
         st = _get_student(db, user)
         if e.student_id != st.id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+    elif role == "Department":
+        scope = getattr(user, "department_scope", None) or ""
+        if not scope or not e.course or (e.course.department or "") != scope:
             raise HTTPException(status_code=403, detail="Forbidden")
     elif role not in (
         "Admin",
@@ -382,6 +432,35 @@ def queue_accounting(
     return [_serialize_enrollment(r) for r in rows]
 
 
+@router.get("/department/enrolled", response_model=List[dict])
+def department_enrolled(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_roles("Department", "Admin"))],
+) -> List[dict]:
+    """Fully enrolled students (all phases approved), scoped by course department."""
+    role = user.role.name if user.role else ""
+    scope: str | None = None
+    if role == "Department":
+        scope = getattr(user, "department_scope", None) or ""
+        if not scope:
+            raise HTTPException(status_code=400, detail="Department scope is not set for this account.")
+
+    q = (
+        db.query(EnrollmentForm)
+        .options(joinedload(EnrollmentForm.course), joinedload(EnrollmentForm.personal))
+        .filter(
+            EnrollmentForm.phase1_status == "Approved",
+            EnrollmentForm.phase2_status == "Approved",
+            EnrollmentForm.phase3_status == "Approved",
+        )
+        .order_by(EnrollmentForm.updated_at.desc())
+    )
+    rows = q.all()
+    if scope:
+        rows = [r for r in rows if r.course and (r.course.department or "") == scope]
+    return [_serialize_enrollment(r) for r in rows]
+
+
 @router.get("/queue/sao", response_model=List[dict])
 def queue_sao(
     db: Annotated[Session, Depends(get_db)],
@@ -398,6 +477,86 @@ def queue_sao(
         .all()
     )
     return [_serialize_enrollment(r) for r in rows]
+
+
+@router.post("/{enrollment_id}/phase2/accounting-verify-and-approve", response_model=dict)
+def accounting_verify_and_approve(
+    enrollment_id: int,
+    body: AccountingPhaseApprove,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_roles("Accounting", "Admin"))],
+) -> dict:
+    """Mark receipt approved and approve phase 2 in one transaction (Accounting queue UX)."""
+    role = user.role.name if user.role else ""
+    e = db.query(EnrollmentForm).filter(EnrollmentForm.id == enrollment_id).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="Not found")
+    if e.phase2_assigned_role != "Accounting" or role not in ("Accounting", "Admin"):
+        raise HTTPException(status_code=403, detail="Accounting only")
+    if e.current_phase < 2 or e.phase2_status != "Pending":
+        raise HTTPException(status_code=400, detail="Invalid state for phase 2 decision")
+
+    p = (
+        db.query(Payment)
+        .filter(Payment.id == body.payment_id, Payment.enrollment_form_id == e.id)
+        .first()
+    )
+    if not p:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    if p.status != "Pending":
+        raise HTTPException(status_code=400, detail="Receipt is not pending verification")
+
+    now = datetime.now(timezone.utc)
+    p.status = "Approved"
+    p.verified_by_user_id = user.id
+    p.verified_at = now
+    if body.notes:
+        p.notes = body.notes
+
+    e.phase2_status = "Approved"
+    e.updated_at = now
+    e.current_phase = 3
+    db.add(
+        Approval(
+            enrollment_form_id=e.id,
+            phase=2,
+            actor_role="Accounting",
+            status="Approved",
+            notes=body.notes,
+            decided_by_user_id=user.id,
+            decided_at=now,
+        )
+    )
+    student = db.query(Student).filter(Student.id == e.student_id).first()
+    stu_user = db.query(User).filter(User.id == student.user_id).first() if student else None
+    if stu_user:
+        notify_user(
+            db,
+            stu_user.id,
+            "Payment verified — Phase 2 approved",
+            body.notes or "Accounting verified your receipt. Student Affairs may contact you for Phase 3.",
+            notification_type="success",
+            related_enrollment_id=e.id,
+        )
+    notify_role_users(
+        db,
+        "Student Affairs Office",
+        "ID validation pending",
+        f"Enrollment #{e.id} ready for SAO (Phase 3).",
+        related_enrollment_id=e.id,
+    )
+    db.commit()
+    db.refresh(e)
+    return _serialize_enrollment(
+        db.query(EnrollmentForm)
+        .options(
+            joinedload(EnrollmentForm.course),
+            joinedload(EnrollmentForm.personal),
+            joinedload(EnrollmentForm.transfer),
+        )
+        .filter(EnrollmentForm.id == e.id)
+        .first()
+    )
 
 
 @router.post("/{enrollment_id}/phase2/decision", response_model=dict)

@@ -130,7 +130,12 @@
       });
       backdrop.querySelector('.modal-btn-ok').onclick = () => {
         const notesEl = backdrop.querySelector('[name="modal-notes"]');
-        finish({ confirm: true, notes: notesEl ? notesEl.value : '' });
+        const payPick = backdrop.querySelector('input[name="paypick"]:checked');
+        finish({
+          confirm: true,
+          notes: notesEl ? notesEl.value : '',
+          payment_id: payPick && payPick.value ? parseInt(payPick.value, 10) : undefined,
+        });
       };
       requestAnimationFrame(() => {
         backdrop.classList.add('modal-enter-active');

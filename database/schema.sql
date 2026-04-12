@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
+    department_scope VARCHAR(128),
     role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -62,7 +63,7 @@ CREATE TABLE IF NOT EXISTS enrollment_forms (
     course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE RESTRICT,
     academic_year VARCHAR(16) NOT NULL,
     semester VARCHAR(32) NOT NULL,
-    category VARCHAR(16) NOT NULL CHECK (category IN ('New', '2nd Year', '3rd Year', '4th Year')),
+    category VARCHAR(16) NOT NULL CHECK (category IN ('New', '2nd Year', '3rd Year', '4th Year', 'Transfer')),
     current_phase SMALLINT NOT NULL DEFAULT 1 CHECK (current_phase BETWEEN 1 AND 3),
     -- Aggregate workflow: blocks progression
     phase1_status VARCHAR(16) NOT NULL DEFAULT 'Pending'
@@ -127,6 +128,21 @@ CREATE TABLE IF NOT EXISTS enrollment_academic (
     shs_strand VARCHAR(128),
     shs_year VARCHAR(32)
 );
+
+-- Transfer student (1:1, optional — only when category = Transfer)
+CREATE TABLE IF NOT EXISTS enrollment_transfer (
+    id SERIAL PRIMARY KEY,
+    enrollment_form_id INTEGER NOT NULL UNIQUE REFERENCES enrollment_forms(id) ON DELETE CASCADE,
+    current_school VARCHAR(255) NOT NULL,
+    current_program VARCHAR(255),
+    last_semester_attended VARCHAR(128),
+    previous_course_code VARCHAR(64),
+    units_completed VARCHAR(64),
+    reason_for_transfer TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_enrollment_transfer_form ON enrollment_transfer(enrollment_form_id);
 
 -- Emergency contact (1:1)
 CREATE TABLE IF NOT EXISTS enrollment_emergency (

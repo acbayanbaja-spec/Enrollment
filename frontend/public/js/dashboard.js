@@ -10,6 +10,10 @@
 
   const role = user.role_name;
   if (role === 'Student') document.body.classList.add('portal-student');
+  if (role === 'Admin') document.body.classList.add('portal-admin');
+  if (['Registrar', 'Accounting', 'Student Affairs Office'].indexOf(role) >= 0) {
+    document.body.classList.add('portal-staff');
+  }
   const main = document.getElementById('main');
   const nav = document.getElementById('nav');
   const pageTitle = document.getElementById('pageTitle');
@@ -68,23 +72,36 @@
     1: 'Tip: Use your legal name as it appears on your school records.',
     2: 'Tip: Provide at least one parent or guardian contact for verification.',
     3: 'Tip: Include your SHS strand if you completed K–12 in the Philippines.',
+    3 xfer: 'Tip: List your previous institution and program accurately for credential evaluation.',
     4: 'Tip: Emergency contact should be reachable during school hours.',
     5: 'Review all sections. After submit, Phase 2 routing depends on your category.',
   };
 
   function getWizardStepSequence() {
     const cat = document.getElementById('category') && document.getElementById('category').value;
-    return cat === 'New' ? [1, 2, 3, 4, 5] : [1, 2, 4, 5];
+    if (cat === 'New' || cat === 'Transfer') return [1, 2, 3, 4, 5];
+    return [1, 2, 4, 5];
   }
 
-  function syncAcademicPanelVisibility() {
+  function syncCategoryPanels() {
     const cat = document.getElementById('category') && document.getElementById('category').value;
-    const panel = document.getElementById('wizardPanelAcademic');
-    if (!panel) return;
     const isNew = cat === 'New';
+    const isXfer = cat === 'Transfer';
+    const af = document.getElementById('academicFields');
+    const tf = document.getElementById('transferFields');
+    const hintNew = document.getElementById('academicHintNew');
+    const hintXfer = document.getElementById('academicHintXfer');
+    if (af) af.classList.toggle('hidden', !isNew);
+    if (tf) tf.classList.toggle('hidden', !isXfer);
+    if (hintNew) hintNew.classList.toggle('hidden', !isNew);
+    if (hintXfer) hintXfer.classList.toggle('hidden', !isXfer);
     ['elem_school', 'jhs_school', 'shs_school'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.required = !!isNew;
+    });
+    ['xfer_current_school', 'xfer_prev_program'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.required = !!isXfer;
     });
   }
 
@@ -109,8 +126,10 @@
       const pct = ((stepIndex + 1) / total) * 100;
       fill.style.width = pct + '%';
       label.textContent = 'Step ' + (stepIndex + 1) + ' of ' + total;
-      hint.innerHTML =
-        '<span class="smart-hint" style="display:block;margin:0">' + WIZARD_HINTS[panelNum] + '</span>';
+      const cat = document.getElementById('category') && document.getElementById('category').value;
+      let hintText = WIZARD_HINTS[panelNum];
+      if (panelNum === 3 && cat === 'Transfer') hintText = WIZARD_HINTS['3 xfer'];
+      hint.innerHTML = '<span class="smart-hint" style="display:block;margin:0">' + hintText + '</span>';
       prev.style.display = stepIndex > 0 ? 'inline-flex' : 'none';
       next.style.display = stepIndex < total - 1 ? 'inline-flex' : 'none';
       submitBtn.style.display = stepIndex === total - 1 ? 'inline-flex' : 'none';
@@ -136,6 +155,17 @@
           return false;
         }
       }
+      if (panelNum === 3) {
+        const c = document.getElementById('category').value;
+        if (c === 'Transfer') {
+          const s = document.getElementById('xfer_current_school').value.trim();
+          const p = document.getElementById('xfer_prev_program').value.trim();
+          if (s.length < 2 || p.length < 2) {
+            UI.toast('error', 'Enter current/previous school and previous program.');
+            return false;
+          }
+        }
+      }
       return true;
     }
 
@@ -143,7 +173,9 @@
       const el = document.getElementById('reviewMount');
       const c = document.getElementById('course_id');
       const ctext = c.options[c.selectedIndex] ? c.options[c.selectedIndex].text : '';
-      const isNew = document.getElementById('category').value === 'New';
+      const cat = document.getElementById('category').value;
+      const isNew = cat === 'New';
+      const isXfer = cat === 'Transfer';
       let academicBlock = '';
       if (isNew) {
         academicBlock =
@@ -152,6 +184,13 @@
           ' (SHS) · ' +
           UI.escapeHtml(document.getElementById('jhs_school').value) +
           ' (JHS)</p>';
+      } else if (isXfer) {
+        academicBlock =
+          '<p><strong>Transfer:</strong> ' +
+          UI.escapeHtml(document.getElementById('xfer_current_school').value) +
+          ' · previous: ' +
+          UI.escapeHtml(document.getElementById('xfer_prev_program').value) +
+          '</p>';
       } else {
         academicBlock = '<p><strong>Academic background:</strong> Not required for returning students.</p>';
       }
@@ -193,13 +232,13 @@
     });
     if (catEl) {
       catEl.addEventListener('change', () => {
-        syncAcademicPanelVisibility();
+        syncCategoryPanels();
         const seq = getWizardStepSequence();
         if (stepIndex >= seq.length) stepIndex = Math.max(0, seq.length - 1);
         showStep();
       });
     }
-    syncAcademicPanelVisibility();
+    syncCategoryPanels();
     showStep();
   }
 
@@ -216,6 +255,17 @@
             shs_school: document.getElementById('shs_school').value.trim(),
             shs_strand: document.getElementById('shs_strand').value.trim() || null,
             shs_year: document.getElementById('shs_year').value.trim() || null,
+          }
+        : null;
+    const transfer =
+      cat === 'Transfer'
+        ? {
+            current_school: document.getElementById('xfer_current_school').value.trim(),
+            current_program: document.getElementById('xfer_prev_program').value.trim(),
+            last_semester_attended: document.getElementById('xfer_last_sem').value.trim() || null,
+            previous_course_code: document.getElementById('xfer_prev_code').value.trim() || null,
+            units_completed: document.getElementById('xfer_units').value.trim() || null,
+            reason_for_transfer: document.getElementById('xfer_reason').value.trim() || null,
           }
         : null;
     return {
@@ -252,6 +302,7 @@
         spouse_contact: document.getElementById('spouse_contact').value.trim() || null,
       },
       academic: academic,
+      transfer: transfer,
       emergency: {
         name: document.getElementById('e_name').value.trim(),
         contact: document.getElementById('e_contact').value.trim(),
@@ -744,29 +795,28 @@
     }
   }
 
-  async function loadReportsCharts(containerStats, containerChart, preEl) {
+  async function loadReportsCharts(statGrid, barRow, lineWrap, deptWrap, funnelWrap, pipelineViz) {
     const r = await api.get('/api/reports/summary');
-    if (preEl) preEl.textContent = JSON.stringify(r, null, 2);
-    if (containerStats) {
-      containerStats.innerHTML =
-        '<div class="stat-tile"><div class="stat-tile__val">' +
+    if (statGrid) {
+      statGrid.innerHTML =
+        '<div class="stat-tile stat-tile--rise"><div class="stat-tile__val">' +
         r.total_enrollments +
-        '</div><div class="stat-tile__lbl">Total enrollments</div></div>' +
-        '<div class="stat-tile"><div class="stat-tile__val">' +
+        '</div><div class="stat-tile__lbl">Total records</div></div>' +
+        '<div class="stat-tile stat-tile--rise stat-tile--delay1"><div class="stat-tile__val">' +
         (r.by_status.phase3_approved || 0) +
-        '</div><div class="stat-tile__lbl">Fully approved</div></div>' +
-        '<div class="stat-tile"><div class="stat-tile__val">' +
+        '</div><div class="stat-tile__lbl">Fully enrolled</div></div>' +
+        '<div class="stat-tile stat-tile--rise stat-tile--delay2"><div class="stat-tile__val">' +
         (r.by_status.rejected_any || 0) +
-        '</div><div class="stat-tile__lbl">Rejected (any phase)</div></div>';
+        '</div><div class="stat-tile__lbl">Rejected (phase 2/3)</div></div>';
     }
-    if (containerChart) {
-      const max = Math.max(1, r.total_enrollments);
+    if (barRow) {
+      const max = Math.max(1, r.total_enrollments, ...Object.values(r.by_phase || {}).map(Number));
       const phases = r.by_phase || {};
-      const h = (n) => Math.round((n / max) * 100) + '%';
-      containerChart.innerHTML = ['1', '2', '3']
+      const h = (n) => Math.round((Number(n) / max) * 100) + '%';
+      barRow.innerHTML = ['1', '2', '3']
         .map(
           (k) =>
-            '<div class="chart-bar-wrap"><div class="chart-bar" style="height:' +
+            '<div class="chart-bar-wrap chart-bar-wrap--nice"><div class="chart-bar chart-bar--nice" style="height:' +
             h(phases[k] || 0) +
             '"></div><span class="chart-label">Phase ' +
             k +
@@ -776,13 +826,93 @@
         )
         .join('');
     }
+    if (pipelineViz && r.by_phase) {
+      const max = Math.max(1, ...['1', '2', '3'].map((k) => Number(r.by_phase[k] || 0)));
+      pipelineViz.innerHTML = ['1', '2', '3']
+        .map((k) => {
+          const n = Number(r.by_phase[k] || 0);
+          const pct = Math.round((n / max) * 100);
+          return (
+            '<div class="pipe-phase"><span class="pipe-phase__n">Phase ' +
+            k +
+            '</span><div class="pipe-phase__track"><span class="pipe-phase__fill" style="width:' +
+            pct +
+            '%"></span></div><span class="pipe-phase__count">' +
+            n +
+            '</span></div>'
+          );
+        })
+        .join('');
+    }
+    if (lineWrap && r.trend && r.trend.length) {
+      const max = Math.max(1, ...r.trend.map((t) => t.count));
+      const w = 480;
+      const h = 140;
+      const pts = r.trend
+        .map((t, i) => {
+          const x = (i / (r.trend.length - 1 || 1)) * (w - 24) + 12;
+          const y = h - 16 - (t.count / max) * (h - 32);
+          return x + ',' + y;
+        })
+        .join(' ');
+      lineWrap.innerHTML =
+        '<svg class="analytics-line-svg" viewBox="0 0 ' +
+        w +
+        ' ' +
+        h +
+        '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+        '<polyline fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="' +
+        pts +
+        '"/>' +
+        '</svg><div class="analytics-trend-labels">' +
+        r.trend.map((t) => '<span>' + UI.escapeHtml(t.label) + '</span>').join('') +
+        '</div>';
+    }
+    if (deptWrap && r.by_department && r.by_department.length) {
+      const max = Math.max(1, ...r.by_department.map((d) => d.count));
+      deptWrap.innerHTML = r.by_department
+        .map((d) => {
+          const pct = Math.round((d.count / max) * 100);
+          return (
+            '<div class="dept-bar-row"><span class="dept-bar-row__name">' +
+            UI.escapeHtml(d.name) +
+            '</span><div class="dept-bar-row__track"><span style="width:' +
+            pct +
+            '%"></span></div><strong>' +
+            d.count +
+            '</strong></div>'
+          );
+        })
+        .join('');
+    } else if (deptWrap) {
+      deptWrap.innerHTML = '<p class="empty-hint">No department data yet.</p>';
+    }
+    if (funnelWrap && r.funnel) {
+      const f = r.funnel;
+      funnelWrap.innerHTML =
+        '<div class="funnel-steps">' +
+        '<div class="funnel-step"><span>Submitted</span><strong>' +
+        (f.applications_submitted || 0) +
+        '</strong></div>' +
+        '<div class="funnel-arrow">→</div>' +
+        '<div class="funnel-step"><span>Phase 2 cleared</span><strong>' +
+        (f.phase2_cleared || 0) +
+        '</strong></div>' +
+        '<div class="funnel-arrow">→</div>' +
+        '<div class="funnel-step funnel-step--accent"><span>Fully enrolled</span><strong>' +
+        (f.fully_enrolled || 0) +
+        '</strong></div></div>';
+    }
   }
 
   async function loadAdminHome() {
     await loadReportsCharts(
       document.getElementById('adminStatGrid'),
       document.getElementById('adminChartRow'),
-      null
+      null,
+      null,
+      null,
+      document.getElementById('adminPipelineViz')
     );
   }
 
@@ -790,18 +920,137 @@
     await loadReportsCharts(
       document.getElementById('reportStatGrid'),
       document.getElementById('reportChartRow'),
-      document.getElementById('reportOut')
+      document.getElementById('reportLineChart'),
+      document.getElementById('reportDeptChart'),
+      document.getElementById('reportFunnel'),
+      null
     );
+  }
+
+  async function loadDepartmentEnrolled() {
+    const el = document.getElementById('deptEnrollMount');
+    if (!el) return;
+    el.innerHTML = '<div class="skeleton skeleton-line"></div>';
+    try {
+      const rows = await api.get('/api/enrollment/department/enrolled');
+      if (!rows.length) {
+        el.innerHTML =
+          '<p class="empty-hint">No fully enrolled students in your department scope yet. Records appear when all phases are approved.</p>';
+        return;
+      }
+      el.innerHTML =
+        '<div class="ds-table-wrap ds-table-wrap--elevated"><table class="ds-table"><thead><tr><th>ID</th><th>Student</th><th>Course</th><th>Term</th></tr></thead><tbody>' +
+        rows
+          .map((e) => {
+            const name =
+              (e.personal && (e.personal.first_name || '') + ' ' + (e.personal.last_name || '')) || '—';
+            return (
+              '<tr><td>#' +
+              e.id +
+              '</td><td>' +
+              UI.escapeHtml(name.trim()) +
+              '</td><td>' +
+              UI.escapeHtml(e.course_code || '') +
+              '<span class="dept-pill">' +
+              UI.escapeHtml(e.course_department || '') +
+              '</span></td><td>' +
+              UI.escapeHtml(e.academic_year) +
+              ' · ' +
+              UI.escapeHtml(e.semester) +
+              '</td></tr>'
+            );
+          })
+          .join('') +
+        '</tbody></table></div>';
+    } catch (e) {
+      el.innerHTML = '<p class="alert-banner alert-banner--error">' + UI.escapeHtml(e.message) + '</p>';
+    }
+  }
+
+  async function accountingApproveFlow(enrollmentId) {
+    let payments;
+    try {
+      payments = await api.get('/api/payments/enrollment/' + enrollmentId);
+    } catch (e) {
+      UI.toast('error', e.message);
+      return;
+    }
+    const pending = payments.filter((p) => p.status === 'Pending');
+    if (!pending.length) {
+      UI.toast(
+        'error',
+        'No pending receipt for this enrollment. The student must upload payment proof before you can approve Phase 2.'
+      );
+      return;
+    }
+    const radios = pending
+      .map(
+        (p, i) =>
+          '<label class="pay-pick"><input type="radio" name="paypick" value="' +
+          p.id +
+          '" ' +
+          (i === 0 ? 'checked' : '') +
+          ' /> #' +
+          p.id +
+          ' · ' +
+          UI.escapeHtml(p.original_filename || 'file') +
+          '</label>'
+      )
+      .join('');
+    const first = pending[0];
+    const file = first.receipt_file_path || '';
+    const ext = file.toLowerCase().split('.').pop();
+    const isImg = ['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) >= 0;
+    const preview = isImg
+      ? '<div class="acct-modal-preview"><img src="' +
+        mediaUrl(file) +
+        '" alt="Receipt preview"/></div>'
+      : '<p><a href="' +
+        mediaUrl(file) +
+        '" target="_blank" rel="noopener" class="acct-modal-link">Open receipt file</a></p>';
+    const body =
+      '<p class="acct-modal-lead">Enrollment <strong>#' +
+      enrollmentId +
+      '</strong> — confirm the receipt matches your records, then approve.</p>' +
+      preview +
+      '<div class="pay-pick-list">' +
+      radios +
+      '</div>' +
+      '<label class="acct-modal-notes-lbl">Notes (optional)</label><textarea name="modal-notes" class="modal-notes" placeholder="Verification notes"></textarea>';
+
+    const modRes = await UI.openModal({
+      title: 'Verify receipt & approve Phase 2',
+      bodyHtml: body,
+      confirmText: 'Verify & approve',
+    });
+    if (!modRes || !modRes.confirm) return;
+    const pid = modRes.payment_id;
+    if (!pid) {
+      UI.toast('error', 'Select a receipt to verify.');
+      return;
+    }
+    try {
+      await api.post('/api/enrollment/' + enrollmentId + '/phase2/accounting-verify-and-approve', {
+        payment_id: pid,
+        notes: modRes.notes || '',
+      });
+      UI.toast('success', 'Receipt verified and Phase 2 approved.');
+      if (queueReload) await queueReload();
+    } catch (e) {
+      UI.toast('error', e.message);
+    }
   }
 
   let queueReload = null;
 
-  async function loadQueue(path, title, decideUrl, phase) {
+  async function loadQueue(path, title, decideUrl, phase, options) {
+    options = options || {};
+    const accountingQueue = !!options.accountingQueue;
     document.getElementById('queueTitle').textContent = title;
     const body = document.getElementById('queueBody');
     const search = document.getElementById('queueSearch');
     const rows = await api.get(path);
-    queueReload = () => loadQueue(path, title, decideUrl, phase);
+    queueReload = () => loadQueue(path, title, decideUrl, phase, options);
 
     function render(filter) {
       const q = (filter || '').toLowerCase();
@@ -819,7 +1068,7 @@
         return;
       }
       body.innerHTML =
-        '<div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>ID</th><th>Course</th><th>Student</th><th>Actions</th></tr></thead><tbody>' +
+        '<div class="ds-table-wrap ds-table-wrap--queue"><table class="ds-table"><thead><tr><th>ID</th><th>Course</th><th>Student</th><th>Actions</th></tr></thead><tbody>' +
         filtered
           .map((e) => {
             const name =
@@ -841,8 +1090,16 @@
           .join('') +
         '</tbody></table></div>';
 
-      body.querySelectorAll('.q-appr').forEach((b) => b.addEventListener('click', () => queueDecision(b.getAttribute('data-eid'), 'approve', decideUrl, phase)));
-      body.querySelectorAll('.q-rej').forEach((b) => b.addEventListener('click', () => queueDecision(b.getAttribute('data-eid'), 'reject', decideUrl, phase)));
+      body.querySelectorAll('.q-appr').forEach((b) =>
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-eid');
+          if (accountingQueue) accountingApproveFlow(id);
+          else queueDecision(id, 'approve', decideUrl, phase);
+        })
+      );
+      body.querySelectorAll('.q-rej').forEach((b) =>
+        b.addEventListener('click', () => queueDecision(b.getAttribute('data-eid'), 'reject', decideUrl, phase))
+      );
     }
 
     search.oninput = () => render(search.value);
@@ -971,6 +1228,22 @@
         document.getElementById('shs_year').value = a.shs_year || '';
       } else {
         ['elem_school', 'elem_year', 'jhs_school', 'jhs_year', 'shs_school', 'shs_strand', 'shs_year'].forEach(
+          (id) => {
+            const node = document.getElementById(id);
+            if (node) node.value = '';
+          }
+        );
+      }
+      if (draft.category === 'Transfer' && draft.transfer) {
+        const t = draft.transfer;
+        document.getElementById('xfer_current_school').value = t.current_school || '';
+        document.getElementById('xfer_prev_program').value = t.current_program || '';
+        document.getElementById('xfer_last_sem').value = t.last_semester_attended || '';
+        document.getElementById('xfer_prev_code').value = t.previous_course_code || '';
+        document.getElementById('xfer_units').value = t.units_completed || '';
+        document.getElementById('xfer_reason').value = t.reason_for_transfer || '';
+      } else {
+        ['xfer_current_school', 'xfer_prev_program', 'xfer_last_sem', 'xfer_prev_code', 'xfer_units', 'xfer_reason'].forEach(
           (id) => {
             const node = document.getElementById(id);
             if (node) node.value = '';
@@ -1195,15 +1468,22 @@
       );
     },
     qacc: async () => {
-      setPageHead('Accounting queue', 'Returning students — confirm payment before approval');
+      setPageHead('Accounting queue', 'Verify receipt in the approval dialog, then Phase 2 completes.');
       showView('');
       main.appendChild(cloneTpl('tpl-queue'));
       await loadQueue(
         '/api/enrollment/queue/accounting',
         'Pending verification',
         '/api/enrollment/{id}/phase2/decision',
-        2
+        2,
+        { accountingQueue: true }
       );
+    },
+    dept: async () => {
+      setPageHead('Department', 'Enrolled students in your department programs');
+      showView('');
+      main.appendChild(cloneTpl('tpl-department-home'));
+      await loadDepartmentEnrolled();
     },
     qsao: async () => {
       setPageHead('ID validation', 'Student Affairs — Phase 3');
@@ -1229,10 +1509,6 @@
     addNav('home', 'Overview', ic.home, () => views.home());
     addNav('reports', 'Analytics', ic.chart, () => views.reports());
     addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
-    addNav('qreg', 'Registrar queue', ic.queue, () => views.qreg());
-    addNav('qacc', 'Accounting queue', ic.queue, () => views.qacc());
-    addNav('payverify', 'Verify receipts', ic.verify, () => views.payverify());
-    addNav('qsao', 'SAO queue', ic.idcard, () => views.qsao());
   }
   if (role === 'Registrar') {
     addNav('qreg', 'My queue', ic.queue, () => views.qreg());
@@ -1241,7 +1517,12 @@
   }
   if (role === 'Accounting') {
     addNav('qacc', 'Enrollment queue', ic.queue, () => views.qacc());
-    addNav('payverify', 'Verify receipts', ic.verify, () => views.payverify());
+    addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
+    addNav('notify', 'Notifications', ic.bell, () => views.notify());
+  }
+  if (role === 'Department') {
+    document.body.classList.add('portal-department');
+    addNav('dept', 'Department', ic.chart, () => views.dept());
     addNav('announce', 'Announcements', ic.megaphone, () => views.announce());
     addNav('notify', 'Notifications', ic.bell, () => views.notify());
   }

@@ -20,6 +20,7 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role_name: str
+    department_scope: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -81,6 +82,17 @@ class AcademicBlock(BaseModel):
     shs_year: Optional[str] = None
 
 
+class TransferBlock(BaseModel):
+    """Previous / current school information for transfer students."""
+
+    current_school: str = Field(..., min_length=2, max_length=255)
+    current_program: Optional[str] = Field(None, max_length=255)
+    last_semester_attended: Optional[str] = Field(None, max_length=128)
+    previous_course_code: Optional[str] = Field(None, max_length=64)
+    units_completed: Optional[str] = Field(None, max_length=64)
+    reason_for_transfer: Optional[str] = Field(None, max_length=2000)
+
+
 class EmergencyBlock(BaseModel):
     name: str = Field(..., min_length=1)
     contact: str = Field(..., min_length=5)
@@ -95,11 +107,12 @@ class EnrollmentDraftCreate(BaseModel):
     course_id: int
     academic_year: str = Field(..., min_length=4, max_length=16)
     semester: str = Field(..., min_length=1, max_length=32)
-    category: str = Field(..., pattern="^(New|2nd Year|3rd Year|4th Year)$")
+    category: str = Field(..., pattern="^(New|2nd Year|3rd Year|4th Year|Transfer)$")
     personal: PersonalBlock
     family: FamilyBlock
     # Required only for new applicants; omitted for returning students (2nd–4th year)
     academic: Optional[AcademicBlock] = None
+    transfer: Optional[TransferBlock] = None
     emergency: EmergencyBlock
 
 
@@ -135,6 +148,13 @@ class EnrollmentDetailOut(BaseModel):
 
 class PhaseDecision(BaseModel):
     status: str = Field(..., pattern="^(Approved|Rejected)$")
+    notes: Optional[str] = Field(None, max_length=2000)
+
+
+class AccountingPhaseApprove(BaseModel):
+    """Verify selected receipt and approve phase 2 in one step (Accounting)."""
+
+    payment_id: int
     notes: Optional[str] = Field(None, max_length=2000)
 
 
@@ -213,3 +233,6 @@ class ReportSummary(BaseModel):
     total_enrollments: int
     by_phase: dict
     by_status: dict
+    by_department: List[dict] = []
+    trend: List[dict] = []
+    funnel: dict = {}

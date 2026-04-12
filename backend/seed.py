@@ -60,6 +60,7 @@ def run() -> None:
             ("Registrar", "New student enrollment"),
             ("Accounting", "Payment verification"),
             ("Student Affairs Office", "ID validation"),
+            ("Department", "Department dashboard by program"),
         ]
         for name, desc in roles_data:
             if not db.query(Role).filter(Role.name == name).first():
@@ -146,10 +147,11 @@ def run() -> None:
             db.commit()
             print("Created student@seait.edu.ph / Student@2026!")
 
-        for email, name, rname in [
-            ("registrar@seait.edu.ph", "Maria Registrar", "Registrar"),
-            ("accounting@seait.edu.ph", "Pedro Accounting", "Accounting"),
-            ("sao@seait.edu.ph", "Ana SAO", "Student Affairs Office"),
+        for email, name, rname, dept_scope in [
+            ("registrar@seait.edu.ph", "Maria Registrar", "Registrar", None),
+            ("accounting@seait.edu.ph", "Pedro Accounting", "Accounting", None),
+            ("sao@seait.edu.ph", "Ana SAO", "Student Affairs Office", None),
+            ("dept.computing@seait.edu.ph", "Carlos Dept Chair", "Department", "Computing"),
         ]:
             role = db.query(Role).filter(Role.name == rname).first()
             if role and not db.query(User).filter(User.email == email).first():
@@ -159,6 +161,7 @@ def run() -> None:
                         password_hash=hash_password("Staff@2026!"),
                         full_name=name,
                         role_id=role.id,
+                        department_scope=dept_scope,
                     )
                 )
                 db.commit()

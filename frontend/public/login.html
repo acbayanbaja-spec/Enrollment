@@ -136,10 +136,17 @@
             <section class="login-staff-hint" aria-label="Demo staff accounts">
               <div class="login-staff-hint__head">
                 <span class="login-staff-hint__label">Demo · staff roles</span>
-                <span class="login-staff-hint__pw">Password <code>Staff@2026!</code> for each</span>
+                <span class="login-staff-hint__pw"
+                  ><code>Staff@2026!</code> staff · <code>Admin@2026!</code> admin</span
+                >
               </div>
               <p class="login-staff-hint__note">Use after <code>seed.py</code>. Tap a row to fill the email field.</p>
               <div class="login-staff-grid">
+                <button type="button" class="login-staff-tile js-fill-demo" data-email="admin@seait.edu.ph">
+                  <span class="login-staff-tile__role">Admin</span>
+                  <span class="login-staff-tile__meta">Overview &amp; analytics</span>
+                  <span class="login-staff-tile__email">admin@seait.edu.ph</span>
+                </button>
                 <button type="button" class="login-staff-tile js-fill-demo" data-email="registrar@seait.edu.ph">
                   <span class="login-staff-tile__role">Registrar</span>
                   <span class="login-staff-tile__meta">Phase 2 · new applicants</span>
@@ -147,13 +154,18 @@
                 </button>
                 <button type="button" class="login-staff-tile js-fill-demo" data-email="accounting@seait.edu.ph">
                   <span class="login-staff-tile__role">Accounting</span>
-                  <span class="login-staff-tile__meta">Phase 2 · payment verification</span>
+                  <span class="login-staff-tile__meta">Phase 2 · verify in approve dialog</span>
                   <span class="login-staff-tile__email">accounting@seait.edu.ph</span>
                 </button>
                 <button type="button" class="login-staff-tile js-fill-demo" data-email="sao@seait.edu.ph">
                   <span class="login-staff-tile__role">Student Affairs</span>
                   <span class="login-staff-tile__meta">Phase 3 · ID validation</span>
                   <span class="login-staff-tile__email">sao@seait.edu.ph</span>
+                </button>
+                <button type="button" class="login-staff-tile js-fill-demo" data-email="dept.computing@seait.edu.ph">
+                  <span class="login-staff-tile__role">Department</span>
+                  <span class="login-staff-tile__meta">Enrolled roster · Computing scope</span>
+                  <span class="login-staff-tile__email">dept.computing@seait.edu.ph</span>
                 </button>
               </div>
             </section>

@@ -8,7 +8,8 @@ INSERT INTO roles (name, description) VALUES
     ('Student', 'Enrolled or applicant student'),
     ('Registrar', 'Handles new student enrollment approval'),
     ('Accounting', 'Payment verification for returning students'),
-    ('Student Affairs Office', 'ID validation and student services')
+    ('Student Affairs Office', 'ID validation and student services'),
+    ('Department', 'Department dashboard — enrolled students by program')
 ON CONFLICT (name) DO NOTHING;
 
 -- Course catalog (SEAIT-style programs — illustrative full list)

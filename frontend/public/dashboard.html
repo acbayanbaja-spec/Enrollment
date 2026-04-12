@@ -145,33 +145,55 @@
 
     <!-- Admin home -->
     <template id="tpl-admin-home">
-      <div class="stat-grid" id="adminStatGrid"></div>
-      <div class="ds-card">
-        <h2>Enrollment pipeline</h2>
-        <div class="chart-row" id="adminChartRow"></div>
+      <div class="stat-grid stat-grid--elevated" id="adminStatGrid"></div>
+      <div class="ds-card ds-card--pipeline admin-pipeline-card">
+        <div class="admin-pipeline-head">
+          <h2>Enrollment pipeline</h2>
+          <p class="admin-pipeline-lead">Live distribution by phase — drag-friendly, glanceable status.</p>
+        </div>
+        <div class="admin-pipeline-viz" id="adminPipelineViz" aria-label="Enrollment by phase"></div>
+        <div class="chart-row chart-row--enhanced" id="adminChartRow"></div>
       </div>
-      <div class="ds-card">
-        <h2>Recent activity</h2>
-        <p style="color: var(--color-text-muted); font-size: 0.9rem">
-          Live audit streams can be connected here. System is operational and accepting enrollments.
-        </p>
+      <div class="ds-card admin-activity-card">
+        <h2>Operations</h2>
+        <p class="admin-pipeline-lead">Queues are available to Registrar, Accounting, and Student Affairs. Admin focuses on overview and analytics.</p>
         <div class="ds-table-wrap">
           <table class="ds-table">
             <thead>
               <tr>
-                <th>Time</th>
-                <th>Event</th>
+                <th>Area</th>
+                <th>Access</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody id="activityTbody">
               <tr>
-                <td>—</td>
-                <td>Portal ready</td>
+                <td>Enrollment intake</td>
+                <td>Registrar / Accounting (by student type)</td>
                 <td><span class="badge badge--ok">Active</span></td>
+              </tr>
+              <tr>
+                <td>Receipt verification</td>
+                <td>Accounting (integrated in queue approval)</td>
+                <td><span class="badge badge--ok">Streamlined</span></td>
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </template>
+
+    <template id="tpl-department-home">
+      <div class="dept-dash">
+        <div class="ds-card ds-card--hero dept-hero">
+          <h2>Department roster</h2>
+          <p class="dept-hero__sub">
+            Students with <strong>fully completed enrollment</strong> (all phases approved) for programs aligned with your
+            department scope.
+          </p>
+        </div>
+        <div class="ds-card dept-table-card">
+          <div id="deptEnrollMount" class="dept-mount"></div>
         </div>
       </div>
     </template>
@@ -201,6 +223,7 @@
                 <label>Category *</label>
                 <select name="category" id="category" required data-step-req="1">
                   <option value="New">New</option>
+                  <option value="Transfer">Transfer student</option>
                   <option value="2nd Year">2nd Year</option>
                   <option value="3rd Year">3rd Year</option>
                   <option value="4th Year">4th Year</option>
@@ -328,10 +351,15 @@
           </div>
 
           <div class="wizard-panel" data-wizard-step="3" id="wizardPanelAcademic">
-            <div class="section-label">Academic background <span id="academicBadge" class="badge badge--pending" style="margin-left: 0.35rem">New students only</span></div>
+            <div class="section-label">
+              Background
+              <span id="academicBadge" class="badge badge--pending" style="margin-left: 0.35rem">Step content by category</span>
+            </div>
             <p id="academicHint" class="smart-hint" style="margin-top: 0">
-              Required for <strong>new applicants</strong> only. Returning students do not submit K–12 records here.
+              <span id="academicHintNew">K–12 record for <strong>new applicants</strong>.</span>
+              <span id="academicHintXfer" class="hidden">Previous and current school details for <strong>transfer students</strong>.</span>
             </p>
+            <div id="academicFields" class="wizard-cat-block">
             <div class="grid-2">
               <div class="ds-field-inline">
                 <label>Elementary school *</label>
@@ -360,6 +388,36 @@
               <div class="ds-field-inline">
                 <label>SHS year</label>
                 <input name="shs_year" id="shs_year" />
+              </div>
+            </div>
+            </div>
+
+            <div id="transferFields" class="wizard-cat-block hidden">
+              <div class="grid-2">
+                <div class="ds-field-inline" style="grid-column: 1 / -1">
+                  <label for="xfer_current_school">Current / previous school *</label>
+                  <input name="xfer_current_school" id="xfer_current_school" placeholder="Institution name" />
+                </div>
+                <div class="ds-field-inline">
+                  <label for="xfer_prev_program">Previous program / course *</label>
+                  <input name="xfer_prev_program" id="xfer_prev_program" placeholder="e.g. BSIT — Year 2" />
+                </div>
+                <div class="ds-field-inline">
+                  <label for="xfer_last_sem">Last semester attended</label>
+                  <input name="xfer_last_sem" id="xfer_last_sem" placeholder="e.g. 1st Sem 2025–2026" />
+                </div>
+                <div class="ds-field-inline">
+                  <label for="xfer_prev_code">Previous course code (if any)</label>
+                  <input name="xfer_prev_code" id="xfer_prev_code" placeholder="Program code" />
+                </div>
+                <div class="ds-field-inline">
+                  <label for="xfer_units">Units completed (approx.)</label>
+                  <input name="xfer_units" id="xfer_units" placeholder="e.g. 72 units" />
+                </div>
+                <div class="ds-field-inline" style="grid-column: 1 / -1">
+                  <label for="xfer_reason">Reason for transfer</label>
+                  <textarea name="xfer_reason" id="xfer_reason" rows="2" placeholder="Brief reason"></textarea>
+                </div>
               </div>
             </div>
           </div>
@@ -517,14 +575,26 @@
     </template>
 
     <template id="tpl-reports">
-      <div class="stat-grid" id="reportStatGrid"></div>
-      <div class="ds-card">
-        <h2>Enrollment distribution</h2>
-        <div class="chart-row" id="reportChartRow"></div>
+      <div class="stat-grid stat-grid--elevated" id="reportStatGrid"></div>
+      <div class="ds-card ds-card--analytics">
+        <h2>Enrollment by phase</h2>
+        <p class="analytics-sub">Bar view — compare volume at each workflow stage.</p>
+        <div class="chart-row chart-row--enhanced" id="reportChartRow"></div>
       </div>
-      <div class="ds-card">
-        <h2>Raw summary</h2>
-        <pre id="reportOut" style="color: var(--color-text-muted); font-size: 0.82rem; overflow: auto"></pre>
+      <div class="ds-card ds-card--analytics">
+        <h2>Applications over time</h2>
+        <p class="analytics-sub">Six-month trend of new enrollment records created.</p>
+        <div class="analytics-line-wrap" id="reportLineChart" aria-label="Trend chart"></div>
+      </div>
+      <div class="ds-card ds-card--analytics">
+        <h2>By department</h2>
+        <p class="analytics-sub">Headcount linked to course department.</p>
+        <div class="analytics-dept-wrap" id="reportDeptChart"></div>
+      </div>
+      <div class="ds-card ds-card--analytics">
+        <h2>Funnel</h2>
+        <p class="analytics-sub">Submitted applications → Phase 2 cleared → Fully enrolled.</p>
+        <div class="analytics-funnel" id="reportFunnel"></div>
       </div>
     </template>
 

@@ -40,6 +40,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    department_scope: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
@@ -114,6 +115,9 @@ class EnrollmentForm(Base):
         back_populates="enrollment", uselist=False
     )
     emergency: Mapped[Optional["EnrollmentEmergency"]] = sa_relationship(
+        back_populates="enrollment", uselist=False
+    )
+    transfer: Mapped[Optional["EnrollmentTransfer"]] = sa_relationship(
         back_populates="enrollment", uselist=False
     )
     payments: Mapped[list["Payment"]] = sa_relationship(back_populates="enrollment")
@@ -194,6 +198,24 @@ class EnrollmentEmergency(Base):
     address: Mapped[str] = mapped_column(Text, nullable=False)
 
     enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="emergency")
+
+
+class EnrollmentTransfer(Base):
+    __tablename__ = "enrollment_transfer"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    enrollment_form_id: Mapped[int] = mapped_column(
+        ForeignKey("enrollment_forms.id", ondelete="CASCADE"), unique=True
+    )
+    current_school: Mapped[str] = mapped_column(String(255), nullable=False)
+    current_program: Mapped[Optional[str]] = mapped_column(String(255))
+    last_semester_attended: Mapped[Optional[str]] = mapped_column(String(128))
+    previous_course_code: Mapped[Optional[str]] = mapped_column(String(64))
+    units_completed: Mapped[Optional[str]] = mapped_column(String(64))
+    reason_for_transfer: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    enrollment: Mapped["EnrollmentForm"] = sa_relationship(back_populates="transfer")
 
 
 class Approval(Base):
