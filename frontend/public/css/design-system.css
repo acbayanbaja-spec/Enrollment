@@ -633,6 +633,13 @@ body {
   color: var(--color-green-deep);
 }
 
+.alert-banner--info {
+  background: rgba(14, 116, 144, 0.08);
+  border: 1px solid rgba(14, 116, 144, 0.22);
+  color: #0c4a6e;
+  line-height: 1.45;
+}
+
 .hidden {
   display: none !important;
 }

@@ -56,6 +56,27 @@
     remember.checked = true;
   }
 
+  (function checkApiHealth() {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_BASE) || '';
+    const banner = document.getElementById('loginSysBanner');
+    if (!banner) return;
+    fetch(base + '/api/health')
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {};
+        });
+      })
+      .then(function (d) {
+        if (d.database === 'unavailable' || d.database === 'error' || d.status === 'degraded') {
+          banner.textContent =
+            d.hint ||
+            'The server cannot reach the database yet. Ask your administrator to set DATABASE_URL on Render (PostgreSQL → Internal Database URL), then redeploy.';
+          banner.classList.remove('hidden');
+        }
+      })
+      .catch(function () {});
+  })();
+
   function bindToggle(btn, input) {
     const label = btn.querySelector('.ds-toggle-pw__text');
     btn.addEventListener('click', () => {

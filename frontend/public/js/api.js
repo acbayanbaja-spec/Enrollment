@@ -41,8 +41,20 @@
 
     if (!res.ok) {
       const detailMsg = formatErrorDetail(data && data.detail);
+      let statusHint = '';
+      if (!detailMsg) {
+        if (res.status === 503) {
+          statusHint =
+            'Service unavailable — often the database is misconfigured or unreachable. Check /api/health.';
+        } else if (res.status === 500) {
+          statusHint = 'Server error — check API logs. If login fails, verify DATABASE_URL matches your PostgreSQL.';
+        } else if (res.status === 401) {
+          statusHint = 'Invalid email or password.';
+        }
+      }
       const fallback =
         detailMsg ||
+        statusHint ||
         (text && text.length && text.length < 400 && !data ? text.trim().slice(0, 200) : '') ||
         (res.statusText ? res.statusText + ' (' + res.status + ')' : 'HTTP ' + res.status);
 

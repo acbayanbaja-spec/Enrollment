@@ -1,10 +1,18 @@
 # Render Blueprint — builds from repo root (uses ./requirements.txt → backend/requirements.txt).
 # IMPORTANT: This must be a **Web Service** (Python), not a Static Site — otherwise /docs and /health 404.
 # Start runs uvicorn from backend/ so `app.main` imports correctly.
-# Create PostgreSQL first; set DATABASE_URL to Internal URL on the Web Service.
+#
+# PostgreSQL is defined below and DATABASE_URL is injected automatically — avoids password mismatch
+# between a manually pasted URL and the database. If you already have a separate Postgres instance,
+# remove the `databases` block and the `fromDatabase` entry, then set DATABASE_URL manually in the dashboard.
 #
 # If you set Root Directory to `backend`: build `pip install -r requirements.txt`, start `uvicorn asgi:app ...`
 # (uses backend/asgi.py). If Root Directory is empty: start `uvicorn asgi:app ...` (uses repo root asgi.py).
+
+databases:
+  - name: enrollment-postgres
+    plan: free
+    databaseName: enrollment_db
 
 services:
   - type: web
@@ -23,7 +31,9 @@ services:
       - key: SKIP_AUTO_DB_SETUP
         value: "false"
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: enrollment-postgres
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS

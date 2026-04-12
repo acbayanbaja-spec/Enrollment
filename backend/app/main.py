@@ -6,12 +6,12 @@ import os
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, StatementError
 
 from app.config import get_settings
 from app.database import engine
@@ -122,6 +122,59 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+
+def _db_connection_user_message(error_text: str) -> str:
+    raw = error_text.lower()
+    if "password authentication failed" in raw:
+        return (
+            "Sign-in is unavailable: PostgreSQL rejected the password in DATABASE_URL. "
+            "On Render: open your PostgreSQL → Connect → copy Internal Database URL → "
+            "paste it as DATABASE_URL on your Web Service → Save → Manual Deploy. "
+            "If you use this repo's render.yaml, DATABASE_URL is linked automatically from the Postgres resource."
+        )
+    if "could not translate host name" in raw or "name or service not known" in raw:
+        return "Sign-in is unavailable: the database hostname in DATABASE_URL could not be resolved."
+    if "connection refused" in raw or "could not connect" in raw:
+        return "Sign-in is unavailable: the database refused the connection. Check that PostgreSQL is running."
+    if "connection timeout" in raw or "timeout expired" in raw:
+        return "Sign-in is unavailable: the database connection timed out. Try again in a moment."
+    return "Sign-in is unavailable: the database cannot be reached right now. Please try again shortly."
+
+
+@app.exception_handler(OperationalError)
+async def handle_operational_error(request: Request, exc: OperationalError) -> JSONResponse:
+    """Return JSON 503 instead of HTML 500 so the login page can show a clear message."""
+    logger.warning("Database operational error on %s: %s", request.url.path, exc)
+    msg = str(getattr(exc, "orig", None) or exc)
+    return JSONResponse(status_code=503, content={"detail": _db_connection_user_message(msg)})
+
+
+@app.exception_handler(StatementError)
+async def handle_statement_error(request: Request, exc: StatementError) -> JSONResponse:
+    """SQLAlchemy often wraps psycopg connection/auth failures in StatementError."""
+    raw = str(getattr(exc, "orig", None) or exc)
+    low = raw.lower()
+    if any(
+        p in low
+        for p in (
+            "password authentication failed",
+            "connection refused",
+            "could not connect",
+            "connection timeout",
+            "timeout expired",
+            "could not translate host name",
+            "server closed the connection",
+        )
+    ):
+        logger.warning("Database connection error (StatementError) on %s: %s", request.url.path, exc)
+        return JSONResponse(status_code=503, content={"detail": _db_connection_user_message(raw)})
+    logger.exception("StatementError on %s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "A database error occurred. Check server logs or run migrations."},
+    )
+
 
 _kw = _cors_middleware_kwargs()
 app.add_middleware(
