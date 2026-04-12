@@ -4,7 +4,7 @@ Application configuration via environment variables.
 from functools import lru_cache
 from typing import List
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,14 @@ class Settings(BaseSettings):
         default="postgresql://postgres:postgres@localhost:5432/enrollment_db",
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _coalesce_empty_database_url(cls, v: object) -> object:
+        """Treat blank env (common dashboard mistake) as the same as unset (use default)."""
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return "postgresql://postgres:postgres@localhost:5432/enrollment_db"
+        return v
 
     cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
 

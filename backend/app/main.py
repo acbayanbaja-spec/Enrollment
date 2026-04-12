@@ -3,6 +3,7 @@ FastAPI application entry — CORS, static frontend, API routers.
 """
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -29,6 +30,10 @@ from app.routers import (
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
+# Render cold start / DB not ready yet — retry schema setup before failing the process.
+_SCHEMA_STARTUP_ATTEMPTS = int(os.getenv("DB_STARTUP_ATTEMPTS", "10"))
+_SCHEMA_STARTUP_DELAY_SEC = float(os.getenv("DB_STARTUP_DELAY_SEC", "2.5"))
+
 
 def _cors_middleware_kwargs():
     """Browsers reject allow_credentials=True with allow_origins=['*']; handle wildcard safely."""
@@ -46,12 +51,28 @@ async def lifespan(app: FastAPI):
     Ensure database tables exist and PostgreSQL is aligned with the ORM (no DBeaver required).
     Set SKIP_AUTO_DB_SETUP=1 to disable (external migrations only).
     """
-    try:
-        ensure_schema(engine)
-        logger.info("Database schema ready (create_all + optional PostgreSQL patches).")
-    except Exception:
-        logger.exception("Database schema setup failed — fix DB connectivity or SQL errors below.")
-        raise
+    if os.getenv("SKIP_AUTO_DB_SETUP", "").lower() in ("1", "true", "yes"):
+        logger.warning("SKIP_AUTO_DB_SETUP is set — skipping automatic schema (create_all + patches).")
+        yield
+        return
+
+    attempts = max(1, _SCHEMA_STARTUP_ATTEMPTS)
+    for attempt in range(1, attempts + 1):
+        try:
+            ensure_schema(engine)
+            logger.info("Database schema ready on attempt %s/%s.", attempt, attempts)
+            break
+        except Exception as e:
+            logger.warning(
+                "Database schema setup attempt %s/%s failed: %s",
+                attempt,
+                attempts,
+                e,
+            )
+            if attempt >= attempts:
+                logger.exception("Database schema setup failed after all retries.")
+                raise
+            time.sleep(_SCHEMA_STARTUP_DELAY_SEC)
     yield
 
 
