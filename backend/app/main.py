@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, engine
+from app.schema_patches import apply_postgres_patches
 from app.routers import (
     ai_routes,
     announcements,
@@ -39,7 +40,8 @@ def _cors_middleware_kwargs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Optional auto-create tables for development (production: use schema.sql + migrations)."""
+    """Apply idempotent DB patches (e.g. missing columns on Render), then optional table create."""
+    apply_postgres_patches(engine)
     if os.getenv("INIT_DB", "").lower() in ("1", "true", "yes"):
         Base.metadata.create_all(bind=engine)
     yield
