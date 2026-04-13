@@ -22,7 +22,7 @@ Detailed diagrams:
 ```
 Enrollment/
 ├── backend/           # FastAPI app (app.main:app)
-├── database/          # schema.sql, seed.sql (reference)
+├── database/          # schema.sql; DBeaver: dbeaver_full_setup_postgresql.sql
 ├── frontend/public/   # Static UI + optional PHP router
 ├── docs/              # FDD, ERD
 ├── render.yaml        # Render blueprint (optional)
@@ -39,12 +39,18 @@ Enrollment/
 
 1. **Create database and apply schema**
 
+   **Option A — DBeaver (paste everything):** create an empty database, open **`database/dbeaver_full_setup_postgresql.sql`** in a SQL editor, paste into DBeaver, and execute. That file bundles **`schema.sql`**, **`migration_002_department_transfer_charts.sql`**, and seed data (roles, courses, cutoffs, BSIT curriculum, demo users with correct bcrypt hashes).
+
+   **Option B — psql:**
+
    ```bash
    createdb enrollment_db
    psql -d enrollment_db -f database/schema.sql
+   psql -d enrollment_db -f database/migration_002_department_transfer_charts.sql
+   psql -d enrollment_db -f database/dbeaver_seed_only_postgresql.sql
    ```
 
-   Optionally load reference seed SQL (roles/courses) — the Python seeder below is preferred for demo users.
+   Alternatively, after the API has created tables once, run **`python seed.py`** for demo users (same accounts as the SQL seed).
 
 2. **Backend environment**
 
@@ -93,21 +99,9 @@ Enrollment/
 
    Receipt files are stored under `backend/uploads/` and exposed read-only at `/media/<filename>` (harden for production).
 
-## Render: login must work **right now** (Postgres stuck on “password rejected”)
+## DBeaver / empty Postgres (restore users and catalog)
 
-On the **Web Service** → **Environment** → add **`PORTAL_USE_SQLITE`** = **`true`** → **Save** → **Manual Deploy**.
-
-The API then uses **`backend/seait_demo.sqlite3`** (ignored by git), **ignores Postgres for connections**, and runs **`seed.py`** on startup so these work:
-
-| Email | Password |
-|--------|----------|
-| admin@seait.edu.ph | Admin@2026! |
-| student@seait.edu.ph | Student@2026! |
-| registrar@seait.edu.ph, accounting@seait.edu.ph, sao@seait.edu.ph, dept.computing@seait.edu.ph | Staff@2026! |
-
-When Postgres is fixed, set **`PORTAL_USE_SQLITE=false`**, redeploy, and use **`DATABASE_URL`** as usual.
-
-The repo **`render.yaml`** ships with **`PORTAL_USE_SQLITE: "true"`** so a fresh Blueprint deploy signs in without manual DB wiring; flip it to **`false`** for production Postgres only.
+If **`DATABASE_URL`** is correct but login fails because the database has no tables or users, connect in **DBeaver** and run **`database/dbeaver_full_setup_postgresql.sql`** (one paste, full schema + seed). To refresh only data on an existing schema, run **`database/dbeaver_seed_only_postgresql.sql`**.
 
 ## Deployment on Render
 
@@ -131,7 +125,7 @@ The repo **`render.yaml`** ships with **`PORTAL_USE_SQLITE: "true"`** so a fresh
    - `CORS_ORIGINS` — your public web URL (e.g. `https://your-service.onrender.com`).
    - `SKIP_AUTO_DB_SETUP` — leave unset or `false`. The app runs **`create_all` + PostgreSQL patches** on every boot so tables and columns (e.g. `users.department_scope`) stay in sync without DBeaver. Set `true` only if you manage DDL externally.
    - `STRICT_DB_STARTUP` — default **`false`**. If the database is unreachable or **`DATABASE_URL` is rejected** (wrong password), the service still **starts in degraded mode** so Render binds a port and `/health` returns 200; fix `/api/health` and login by pasting the correct **Internal Database URL**. Set **`true`** if you want the deploy to **fail** when the DB is not available.
-4. After deploy, run `python seed.py` from a **Render shell** (or local with `DATABASE_URL`) if you need demo users, or use `/api/auth/register` as **Admin** to create accounts.
+4. After deploy, if you need demo users: run **`database/dbeaver_full_setup_postgresql.sql`** or **`database/dbeaver_seed_only_postgresql.sql`** in DBeaver against your Postgres, or run `python seed.py` from a **Render shell** (or local with `DATABASE_URL`), or use `/api/auth/register` as **Admin** to create accounts.
 
 You can also connect this repo to Render using `render.yaml` (adjust `rootDir` and env as needed).
 

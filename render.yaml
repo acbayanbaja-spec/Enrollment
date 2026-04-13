@@ -30,9 +30,6 @@ services:
       # Set SKIP_AUTO_DB_SETUP=true only if you apply DDL entirely outside the app.
       - key: SKIP_AUTO_DB_SETUP
         value: "false"
-      # Set to "false" after Postgres credentials work; while fixing Render DB, "true" uses SQLite + auto-seed so login works.
-      - key: PORTAL_USE_SQLITE
-        value: "true"
       - key: DATABASE_URL
         fromDatabase:
           name: enrollment-postgres

@@ -1,14 +1,9 @@
 """
-SQLAlchemy engine and session factory.
-
-Emergency demo (thesis / defense): set PORTAL_USE_SQLITE=true — uses a local SQLite file under
-backend/, ignores DATABASE_URL for the engine, and startup runs seed.py so all demo logins work
-without fixing Render Postgres. Set back to false and fix DATABASE_URL for production.
+SQLAlchemy engine and session factory (PostgreSQL via DATABASE_URL).
 """
 import os
 import re
 from collections.abc import Generator
-from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url
@@ -17,19 +12,6 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from app.config import get_settings
 
 _VALID_SSL = frozenset(("disable", "allow", "prefer", "require", "verify-ca", "verify-full"))
-
-
-def using_sqlite_demo() -> bool:
-    return os.getenv("PORTAL_USE_SQLITE", "").lower() in ("1", "true", "yes")
-
-
-def _sqlite_demo_url() -> str:
-    fname = (os.getenv("SQLITE_PATH") or "seait_demo.sqlite3").strip() or "seait_demo.sqlite3"
-    if os.path.isabs(fname):
-        p = Path(fname)
-    else:
-        p = Path(__file__).resolve().parent.parent / fname
-    return f"sqlite:///{p.as_posix()}"
 
 
 def _normalize_postgres_url(raw: str) -> str:
@@ -77,18 +59,11 @@ def _normalize_postgres_url(raw: str) -> str:
 
 
 settings = get_settings()
-if using_sqlite_demo():
-    _engine_url = _sqlite_demo_url()
-    engine = create_engine(
-        _engine_url,
-        connect_args={"check_same_thread": False},
-    )
-else:
-    engine = create_engine(
-        _normalize_postgres_url(settings.database_url),
-        pool_pre_ping=True,
-        connect_args={"application_name": "seait-enrollment"},
-    )
+engine = create_engine(
+    _normalize_postgres_url(settings.database_url),
+    pool_pre_ping=True,
+    connect_args={"application_name": "seait-enrollment"},
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

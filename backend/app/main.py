@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, StatementError
 
 from app.config import get_settings
-from app.database import engine, using_sqlite_demo
+from app.database import engine
 from app.schema_patches import ensure_schema
 from app.routers import (
     ai_routes,
@@ -90,25 +90,6 @@ async def lifespan(app: FastAPI):
         yield
         return
 
-    if using_sqlite_demo():
-        logger.warning(
-            "PORTAL_USE_SQLITE is on — using SQLite demo DB (Postgres DATABASE_URL ignored). "
-            "For production, set PORTAL_USE_SQLITE=false and fix DATABASE_URL."
-        )
-        try:
-            ensure_schema(engine)
-            app.state.db_ready = True
-            app.state.sqlite_demo = True
-            import seed  # noqa: PLC0415 — backend/seed.py; cwd is backend on Render
-
-            seed.run()
-            logger.info("SQLite demo: tables + seed data ready (admin / student / staff logins).")
-        except Exception:
-            logger.exception("SQLite demo startup failed.")
-            raise
-        yield
-        return
-
     attempts = max(1, _SCHEMA_STARTUP_ATTEMPTS)
     for attempt in range(1, attempts + 1):
         try:
@@ -147,11 +128,10 @@ def _db_connection_user_message(error_text: str) -> str:
     raw = error_text.lower()
     if "password authentication failed" in raw:
         return (
-            "QUICK FIX (demo / defense): On Render Web Service set PORTAL_USE_SQLITE=true, Save, redeploy — "
-            "login works immediately with SQLite + seeded accounts (admin@seait.edu.ph / Admin@2026!). "
-            "Then fix Postgres. "
-            "Otherwise: PostgreSQL rejected DATABASE_URL — same Render region as Postgres; paste Internal URL "
-            "with no quotes; redeploy; try RENDER_INTERNAL_PG_SSL=disable or require for internal dpg-…-a hosts."
+            "PostgreSQL rejected DATABASE_URL — use the Internal Database URL from Render (same region as the web "
+            "service), no extra quotes. Redeploy after saving. If the host looks like dpg-…-a, try "
+            "RENDER_INTERNAL_PG_SSL=disable or require. Seed demo users with database/dbeaver_full_setup_postgresql.sql "
+            "in DBeaver if the database is empty."
         )
     if "could not translate host name" in raw or "name or service not known" in raw:
         return "Sign-in is unavailable: the database hostname in DATABASE_URL could not be resolved."
@@ -238,10 +218,6 @@ def health_live() -> dict:
 def health_api() -> dict:
     """App status including database connectivity (may take up to connect_timeout if DB is down)."""
     payload: dict = {"status": "ok", "service": settings.app_name}
-    if using_sqlite_demo():
-        payload["database"] = "sqlite_demo"
-        payload["hint"] = "PORTAL_USE_SQLITE=true — demo file DB; set false + DATABASE_URL for Postgres."
-        return payload
     if getattr(app.state, "db_ready", True) is False:
         payload["status"] = "degraded"
         payload["database"] = "unavailable"
