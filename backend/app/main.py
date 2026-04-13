@@ -128,10 +128,12 @@ def _db_connection_user_message(error_text: str) -> str:
     raw = error_text.lower()
     if "password authentication failed" in raw:
         return (
-            "Sign-in is unavailable: PostgreSQL rejected DATABASE_URL (wrong password, stale URL, or quotes in the env var). "
-            "Fix: PostgreSQL → Connect → copy Internal Database URL again (no surrounding quotes), paste as DATABASE_URL, Save, Manual Deploy. "
-            "If you rotated the database password, you must copy the new URL. "
-            "If it still fails, try the External Database URL with env DATABASE_SSL_MODE=require."
+            "Sign-in is unavailable: PostgreSQL rejected DATABASE_URL. Checklist: "
+            "(1) Web service and Postgres must be in the same Render account/region. "
+            "(2) Paste Internal URL with no quotes or line breaks; redeploy after saving. "
+            "(3) If you rotated the DB password, copy the URL again from PostgreSQL → Connect. "
+            "(4) Internal host dpg-…-a: try env RENDER_INTERNAL_PG_SSL=disable then require. "
+            "(5) External host …postgres.render.com: app uses sslmode=require automatically; set DATABASE_SSL_MODE if needed."
         )
     if "could not translate host name" in raw or "name or service not known" in raw:
         return "Sign-in is unavailable: the database hostname in DATABASE_URL could not be resolved."

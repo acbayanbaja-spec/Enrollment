@@ -34,6 +34,8 @@ class Settings(BaseSettings):
             return "postgresql://postgres:postgres@localhost:5432/enrollment_db"
         if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
             s = s[1:-1].strip()
+        # Broken multiline / Windows paste — connection strings must be a single line
+        s = s.replace("\r", "").replace("\n", "").strip()
         return s
 
     cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
