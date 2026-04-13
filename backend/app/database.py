@@ -1,13 +1,14 @@
 """
 SQLAlchemy engine and session factory.
 
-DATABASE_URL normalization is tuned for Render (internal dpg-…-a hostnames vs external *.postgres.render.com).
-Override anytime with DATABASE_SSL_MODE=disable|allow|prefer|require|verify-full.
-Internal-only override: RENDER_INTERNAL_PG_SSL (defaults to prefer).
+Emergency demo (thesis / defense): set PORTAL_USE_SQLITE=true — uses a local SQLite file under
+backend/, ignores DATABASE_URL for the engine, and startup runs seed.py so all demo logins work
+without fixing Render Postgres. Set back to false and fix DATABASE_URL for production.
 """
 import os
 import re
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url
@@ -18,7 +19,20 @@ from app.config import get_settings
 _VALID_SSL = frozenset(("disable", "allow", "prefer", "require", "verify-ca", "verify-full"))
 
 
-def _normalize_database_url(raw: str) -> str:
+def using_sqlite_demo() -> bool:
+    return os.getenv("PORTAL_USE_SQLITE", "").lower() in ("1", "true", "yes")
+
+
+def _sqlite_demo_url() -> str:
+    fname = (os.getenv("SQLITE_PATH") or "seait_demo.sqlite3").strip() or "seait_demo.sqlite3"
+    if os.path.isabs(fname):
+        p = Path(fname)
+    else:
+        p = Path(__file__).resolve().parent.parent / fname
+    return f"sqlite:///{p.as_posix()}"
+
+
+def _normalize_postgres_url(raw: str) -> str:
     """Use psycopg3 driver, explicit port when omitted, timeouts, and sensible TLS per host kind."""
     s = raw.strip()
     if s.startswith("postgresql://") and "+psycopg" not in s and "+psycopg2" not in s:
@@ -30,7 +44,6 @@ def _normalize_database_url(raw: str) -> str:
     host = (url.host or "").lower()
     is_local = host in ("localhost", "127.0.0.1", "::1") or not host
 
-    # Render / cloud: libpq defaults port 5432 but being explicit avoids rare URL parse edge cases.
     if not is_local and url.port is None and host:
         url = url.set(port=5432)
 
@@ -42,7 +55,7 @@ def _normalize_database_url(raw: str) -> str:
     if ssl_env in _VALID_SSL:
         url = url.update_query_dict({"sslmode": ssl_env})
     elif "sslmode" in q or "ssl" in q:
-        pass  # pasted URL already includes ssl parameters
+        pass
     elif is_local:
         pass
     elif "postgres.render.com" in host or re.search(
@@ -50,11 +63,8 @@ def _normalize_database_url(raw: str) -> str:
         host,
         flags=re.IGNORECASE,
     ):
-        # External / public Render Postgres — TLS is mandatory.
         url = url.update_query_dict({"sslmode": "require"})
     elif re.fullmatch(r"dpg-[a-z0-9]+-[ab]", host, flags=re.IGNORECASE):
-        # Private hostname inside Render (e.g. dpg-xxxxx-a). Try prefer; if auth still fails, set
-        # RENDER_INTERNAL_PG_SSL=disable or require on the web service.
         internal = os.getenv("RENDER_INTERNAL_PG_SSL", "prefer").strip().lower()
         if internal in _VALID_SSL:
             url = url.update_query_dict({"sslmode": internal})
@@ -67,11 +77,19 @@ def _normalize_database_url(raw: str) -> str:
 
 
 settings = get_settings()
-engine = create_engine(
-    _normalize_database_url(settings.database_url),
-    pool_pre_ping=True,
-    connect_args={"application_name": "seait-enrollment"},
-)
+if using_sqlite_demo():
+    _engine_url = _sqlite_demo_url()
+    engine = create_engine(
+        _engine_url,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        _normalize_postgres_url(settings.database_url),
+        pool_pre_ping=True,
+        connect_args={"application_name": "seait-enrollment"},
+    )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

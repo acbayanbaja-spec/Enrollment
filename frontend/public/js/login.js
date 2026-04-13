@@ -67,10 +67,16 @@
         });
       })
       .then(function (d) {
+        if (d.database === 'sqlite_demo') {
+          banner.textContent =
+            'Demo database is active — you can sign in now (e.g. admin@seait.edu.ph / Admin@2026!, or staff demo tiles).';
+          banner.classList.remove('hidden');
+          return;
+        }
         if (d.database === 'unavailable' || d.database === 'error' || d.status === 'degraded') {
           banner.textContent =
             d.hint ||
-            'The server cannot reach the database yet. Ask your administrator to set DATABASE_URL on Render (PostgreSQL → Internal Database URL), then redeploy.';
+            'The server cannot reach PostgreSQL. Fast fix: set PORTAL_USE_SQLITE=true on Render, redeploy, then use demo passwords. Or fix DATABASE_URL.';
           banner.classList.remove('hidden');
         }
       })

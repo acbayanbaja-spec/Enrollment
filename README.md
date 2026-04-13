@@ -93,6 +93,22 @@ Enrollment/
 
    Receipt files are stored under `backend/uploads/` and exposed read-only at `/media/<filename>` (harden for production).
 
+## Render: login must work **right now** (Postgres stuck on “password rejected”)
+
+On the **Web Service** → **Environment** → add **`PORTAL_USE_SQLITE`** = **`true`** → **Save** → **Manual Deploy**.
+
+The API then uses **`backend/seait_demo.sqlite3`** (ignored by git), **ignores Postgres for connections**, and runs **`seed.py`** on startup so these work:
+
+| Email | Password |
+|--------|----------|
+| admin@seait.edu.ph | Admin@2026! |
+| student@seait.edu.ph | Student@2026! |
+| registrar@seait.edu.ph, accounting@seait.edu.ph, sao@seait.edu.ph, dept.computing@seait.edu.ph | Staff@2026! |
+
+When Postgres is fixed, set **`PORTAL_USE_SQLITE=false`**, redeploy, and use **`DATABASE_URL`** as usual.
+
+The repo **`render.yaml`** ships with **`PORTAL_USE_SQLITE: "true"`** so a fresh Blueprint deploy signs in without manual DB wiring; flip it to **`false`** for production Postgres only.
+
 ## Deployment on Render
 
 1. Create a **PostgreSQL** instance on Render; note the **Internal Database URL**.

@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 venv/
 backend/uploads/
+backend/seait_demo.sqlite3
 *.log
 .DS_Store
 Thumbs.db
