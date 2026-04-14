@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, StatementError
 
-from app.config import get_settings
+from app.config import get_settings, redact_database_url_for_log
 from app.database import engine
 from app.schema_patches import ensure_schema
 from app.routers import (
@@ -90,6 +90,11 @@ async def lifespan(app: FastAPI):
         yield
         return
 
+    logger.info(
+        "Effective DATABASE_URL (password hidden): %s",
+        redact_database_url_for_log(settings.database_url),
+    )
+
     attempts = max(1, _SCHEMA_STARTUP_ATTEMPTS)
     for attempt in range(1, attempts + 1):
         try:
@@ -128,10 +133,10 @@ def _db_connection_user_message(error_text: str) -> str:
     raw = error_text.lower()
     if "password authentication failed" in raw:
         return (
-            "PostgreSQL rejected DATABASE_URL — use the Internal Database URL from Render (same region as the web "
-            "service), no extra quotes. Redeploy after saving. If the host looks like dpg-…-a, try "
-            "RENDER_INTERNAL_PG_SSL=disable or require. Seed demo users with database/dbeaver_full_setup_postgresql.sql "
-            "in DBeaver if the database is empty."
+            "PostgreSQL rejected the password for the database user in DATABASE_URL. On Render: Postgres → Connect → "
+            "copy Internal Database URL again (one line, no quotes). Web Service → Environment → replace DATABASE_URL → "
+            "Save → redeploy. Open /api/health and compare database_url_redacted to the user/host/database you expect. "
+            "If the password contains @ # % + : / ? characters, URL-encode them in the password part."
         )
     if "could not translate host name" in raw or "name or service not known" in raw:
         return "Sign-in is unavailable: the database hostname in DATABASE_URL could not be resolved."
@@ -217,11 +222,18 @@ def health_live() -> dict:
 @app.get("/api/health")
 def health_api() -> dict:
     """App status including database connectivity (may take up to connect_timeout if DB is down)."""
-    payload: dict = {"status": "ok", "service": settings.app_name}
+    payload: dict = {
+        "status": "ok",
+        "service": settings.app_name,
+        "database_url_redacted": redact_database_url_for_log(settings.database_url),
+    }
     if getattr(app.state, "db_ready", True) is False:
         payload["status"] = "degraded"
         payload["database"] = "unavailable"
-        payload["hint"] = "DATABASE_URL rejected or DB unreachable at startup — update credentials on Render."
+        payload["hint"] = (
+            "DATABASE_URL rejected or DB unreachable at startup — update credentials on Render. "
+            "Compare database_url_redacted here with Postgres → Connect → Internal URL (user, host, database must match)."
+        )
         return payload
     try:
         with engine.connect() as conn:
@@ -230,6 +242,7 @@ def health_api() -> dict:
     except Exception:
         payload["status"] = "degraded"
         payload["database"] = "error"
+        payload["hint"] = "Live DB check failed — see Render logs; verify DATABASE_URL matches Internal Database URL."
     return payload
 
 

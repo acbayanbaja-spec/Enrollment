@@ -6,6 +6,26 @@ from typing import List
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine.url import make_url
+
+
+def redact_database_url_for_log(raw: str) -> str:
+    """Safe to print in logs or JSON: user, host, port, database — never the password."""
+    s = (raw or "").strip()
+    if not s:
+        return "(empty DATABASE_URL)"
+    try:
+        u = make_url(s)
+        if u.get_backend_name() != "postgresql":
+            return f"{u.drivername}://***"
+        user = u.username or "?"
+        host = u.host or "?"
+        port = u.port
+        db = u.database or "?"
+        port_part = f":{port}" if port else ""
+        return f"postgresql://{user}:***@{host}{port_part}/{db}"
+    except Exception:
+        return "(unparseable DATABASE_URL — paste as one line; if password has @ # % encode it per RFC 3986)"
 
 
 class Settings(BaseSettings):
