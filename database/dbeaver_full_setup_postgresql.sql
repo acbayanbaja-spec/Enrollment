@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_role ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id);
 
 -- Student profile (1:1 with users where role = student)
 CREATE TABLE IF NOT EXISTS students (
@@ -87,8 +87,8 @@ CREATE TABLE IF NOT EXISTS enrollment_forms (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_enrollment_student ON enrollment_forms(student_id);
-CREATE INDEX idx_enrollment_year ON enrollment_forms(academic_year, semester);
+CREATE INDEX IF NOT EXISTS idx_enrollment_student ON enrollment_forms(student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollment_year ON enrollment_forms(academic_year, semester);
 
 -- Personal block (1:1)
 CREATE TABLE IF NOT EXISTS enrollment_personal (
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS approvals (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_approvals_form ON approvals(enrollment_form_id);
+CREATE INDEX IF NOT EXISTS idx_approvals_form ON approvals(enrollment_form_id);
 
 -- Payment receipts (old students / accounting path)
 CREATE TABLE IF NOT EXISTS payments (
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS payments (
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_payments_form ON payments(enrollment_form_id);
+CREATE INDEX IF NOT EXISTS idx_payments_form ON payments(enrollment_form_id);
 
 -- In-app notifications
 CREATE TABLE IF NOT EXISTS notifications (
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
 
 -- Announcements (admin)
 CREATE TABLE IF NOT EXISTS announcements (
@@ -295,13 +295,13 @@ COMMIT;
 BEGIN;
 
 -- Roles (includes Department for department dashboard)
-INSERT INTO roles (name, description) VALUES
-    ('Admin', 'System administration'),
-    ('Student', 'Enrolled or applicant student'),
-    ('Registrar', 'Handles new student enrollment approval'),
-    ('Accounting', 'Payment verification for returning students'),
-    ('Student Affairs Office', 'ID validation and student services'),
-    ('Department', 'Department dashboard — enrolled students by program')
+INSERT INTO roles (name, description, created_at) VALUES
+    ('Admin', 'System administration', NOW()),
+    ('Student', 'Enrolled or applicant student', NOW()),
+    ('Registrar', 'Handles new student enrollment approval', NOW()),
+    ('Accounting', 'Payment verification for returning students', NOW()),
+    ('Student Affairs Office', 'ID validation and student services', NOW()),
+    ('Department', 'Department dashboard — enrolled students by program', NOW())
 ON CONFLICT (name) DO NOTHING;
 
 -- Program catalog (same list as backend/seed.py)
@@ -329,8 +329,8 @@ INSERT INTO courses (code, name, department, degree) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- Cut-off windows (only if table is empty)
-INSERT INTO cut_off_dates (label, phase, starts_at, ends_at)
-SELECT * FROM (VALUES
+INSERT INTO cut_off_dates (label, phase, starts_at, ends_at, created_at)
+SELECT label, phase, starts_at, ends_at, NOW() FROM (VALUES
     ('Phase 1 — Enrollment Form', 1::smallint, NOW() - INTERVAL '30 days', NOW() + INTERVAL '60 days'),
     ('Phase 2 — Verification', 2::smallint, NOW() - INTERVAL '30 days', NOW() + INTERVAL '45 days'),
     ('Phase 3 — Student Affairs', 3::smallint, NOW() - INTERVAL '30 days', NOW() + INTERVAL '30 days')
@@ -355,69 +355,81 @@ WHERE c.code = 'BSIT'
 ON CONFLICT (course_id, code) DO NOTHING;
 
 -- Demo users (passwords: Admin@2026! / Staff@2026! / Student@2026!)
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'admin@seait.edu.ph',
        '$2b$12$Ih0sW37PTnnRwn7HzT9by.kzJ3C/xM9Q8TRguoKy3/IF5nakEj07S',
-       'System Administrator', NULL, r.id FROM roles r WHERE r.name = 'Admin'
+       'System Administrator', NULL, r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Admin'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'student@seait.edu.ph',
        '$2b$12$v/loOaSA42LWABp572EhOuxQkIY1eM0.pu7WumxWQEjU/ZFiLb.5W',
-       'Juan Dela Cruz', NULL, r.id FROM roles r WHERE r.name = 'Student'
+       'Juan Dela Cruz', NULL, r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Student'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'registrar@seait.edu.ph',
        '$2b$12$C4K65LeqfzB8aT.lIOQ29ux6B4r8oOr1RHRBWQk6R8Q6OZ6Noxx36',
-       'Maria Registrar', NULL, r.id FROM roles r WHERE r.name = 'Registrar'
+       'Maria Registrar', NULL, r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Registrar'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'accounting@seait.edu.ph',
        '$2b$12$C4K65LeqfzB8aT.lIOQ29ux6B4r8oOr1RHRBWQk6R8Q6OZ6Noxx36',
-       'Pedro Accounting', NULL, r.id FROM roles r WHERE r.name = 'Accounting'
+       'Pedro Accounting', NULL, r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Accounting'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'sao@seait.edu.ph',
        '$2b$12$C4K65LeqfzB8aT.lIOQ29ux6B4r8oOr1RHRBWQk6R8Q6OZ6Noxx36',
-       'Ana SAO', NULL, r.id FROM roles r WHERE r.name = 'Student Affairs Office'
+       'Ana SAO', NULL, r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Student Affairs Office'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
-INSERT INTO users (email, password_hash, full_name, department_scope, role_id)
+INSERT INTO users (email, password_hash, full_name, department_scope, role_id, is_active, created_at, updated_at)
 SELECT 'dept.computing@seait.edu.ph',
        '$2b$12$C4K65LeqfzB8aT.lIOQ29ux6B4r8oOr1RHRBWQk6R8Q6OZ6Noxx36',
-       'Carlos Dept Chair', 'Computing', r.id FROM roles r WHERE r.name = 'Department'
+       'Carlos Dept Chair', 'Computing', r.id, TRUE, NOW(), NOW() FROM roles r WHERE r.name = 'Department'
 ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     full_name = EXCLUDED.full_name,
     role_id = EXCLUDED.role_id,
-    department_scope = EXCLUDED.department_scope;
+    department_scope = EXCLUDED.department_scope,
+    is_active = TRUE,
+    updated_at = NOW();
 
 -- Student profile row for demo student
-INSERT INTO students (user_id, student_number)
-SELECT u.id, '2026-00001' FROM users u WHERE u.email = 'student@seait.edu.ph'
+INSERT INTO students (user_id, student_number, created_at)
+SELECT u.id, '2026-00001', NOW() FROM users u WHERE u.email = 'student@seait.edu.ph'
 ON CONFLICT (user_id) DO UPDATE SET student_number = EXCLUDED.student_number;
 
 COMMIT;
