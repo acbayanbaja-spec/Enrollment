@@ -96,6 +96,7 @@ async def lifespan(app: FastAPI):
         redact_database_url_for_log(settings.database_url),
     )
 
+    app.state.db_startup_error = None
     attempts = max(1, _SCHEMA_STARTUP_ATTEMPTS)
     for attempt in range(1, attempts + 1):
         try:
@@ -109,6 +110,7 @@ async def lifespan(app: FastAPI):
             app.state.db_ready = True
             break
         except Exception as e:
+            app.state.db_startup_error = str(e)
             logger.warning(
                 "Database schema setup attempt %s/%s failed: %s",
                 attempt,
@@ -240,6 +242,8 @@ def health_api() -> dict:
             "DATABASE_URL rejected or DB unreachable at startup — update credentials on Render. "
             "Compare database_url_redacted here with Postgres → Connect → Internal URL (user, host, database must match)."
         )
+        if getattr(app.state, "db_startup_error", None):
+            payload["startup_error"] = str(app.state.db_startup_error)
         return payload
     try:
         with engine.connect() as conn:
