@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # Render cold start / DB not ready yet — retry schema setup before failing the process.
 _SCHEMA_STARTUP_ATTEMPTS = int(os.getenv("DB_STARTUP_ATTEMPTS", "10"))
 _SCHEMA_STARTUP_DELAY_SEC = float(os.getenv("DB_STARTUP_DELAY_SEC", "2.5"))
+_AUTO_SEED_ON_STARTUP = os.getenv("AUTO_SEED_ON_STARTUP", "true").lower() in ("1", "true", "yes")
 
 
 def _is_recoverable_db_startup_error(exc: BaseException) -> bool:
@@ -99,6 +100,11 @@ async def lifespan(app: FastAPI):
     for attempt in range(1, attempts + 1):
         try:
             ensure_schema(engine)
+            if _AUTO_SEED_ON_STARTUP:
+                import seed  # noqa: PLC0415
+
+                seed.run()
+                logger.info("Startup seed complete (roles/courses/cutoffs/demo users).")
             logger.info("Database schema ready on attempt %s/%s.", attempt, attempts)
             app.state.db_ready = True
             break

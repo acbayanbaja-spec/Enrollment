@@ -9,6 +9,11 @@
 # If you set Root Directory to `backend`: build `pip install -r requirements.txt`, start `uvicorn asgi:app ...`
 # (uses backend/asgi.py). If Root Directory is empty: start `uvicorn asgi:app ...` (uses repo root asgi.py).
 
+databases:
+  - name: enrollment-postgres
+    plan: free
+    databaseName: enrollment_db
+
 services:
   - type: web
     name: seait-enrollment-api
@@ -25,8 +30,12 @@ services:
       # Set SKIP_AUTO_DB_SETUP=true only if you apply DDL entirely outside the app.
       - key: SKIP_AUTO_DB_SETUP
         value: "false"
+      - key: AUTO_SEED_ON_STARTUP
+        value: "true"
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: enrollment-postgres
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
